@@ -1,0 +1,308 @@
+text,politeness,sarcasm,toxicity
+"Thank you so much for your help, I really appreciate it.",9,0,0
+"Wow, another brilliant idea from the management team.",3,8,1
+"Could you please send me the file when you have a moment?",10,0,0
+"Sure, because staying late every night is my favorite thing.",2,9,1
+"You did an amazing job with that presentation.",9,0,0
+"Guess what, the server crashed again. Shocking.",3,9,2
+"I’m truly grateful for your patience today.",10,0,0
+"Right, because ignoring my emails was clearly the best option.",3,8,1
+"That was completely unnecessary and disrespectful.",2,1,6
+"Great, now we can waste even more time fixing this.",3,7,2
+"Please let me know if you need any assistance.",9,0,0
+"You’ve outdone yourself, as usual.",5,6,1
+"Stop talking nonsense and focus.",1,0,7
+"Of course, because you always know better.",4,7,2
+"Thanks again for the opportunity to work with you.",9,0,0
+"That’s just perfect, another meeting that could’ve been an email.",2,8,1
+"Hey, you handled that situation really well.",8,0,0
+"Nice try, but that excuse doesn’t work anymore.",4,6,3
+"You’re unbelievable, in the worst possible way.",1,2,8
+"Please consider revising the report format before sending.",9,0,0
+"Fantastic, another bug we didn’t need.",3,7,2
+"Your contribution was really helpful to the team.",8,0,0
+"Don’t worry, it’s not like deadlines matter here anyway.",3,8,1
+"Could you be any slower?",1,5,5
+"That comment was completely out of line.",2,0,7
+"Well done on finishing early, that’s impressive!",9,0,0
+"Yeah sure, because that plan worked so well last time.",3,8,1
+"Your attitude is unacceptable.",1,0,8
+"Thank you for clarifying that detail.",8,0,0
+"I see you’ve finally decided to show up.",2,7,3
+"Appreciate your support on this project.",9,0,0
+"Wonderful, just what I needed — more chaos.",3,8,2
+"Please let’s focus on solving the issue together.",8,0,0
+"How kind of you to remind us of your mistakes again.",3,9,2
+"You’re such a disappointment.",0,0,9
+"Could you double-check that before submitting?",9,0,0
+"Wow, who could have guessed this would fail again.",3,8,1
+"Good morning, I hope you’re having a great start to the day.",10,0,0
+"Stop pretending you know what you’re doing.",1,0,8
+"Brilliant, you broke it again.",2,8,2
+"Thanks, I couldn’t have done it without your help.",9,0,0
+"Sure, because that’s totally my responsibility.",3,8,1
+"You’re being very rude right now.",1,0,8
+"Let’s keep communication clear and professional, please.",9,0,0
+"Perfect, more pointless feedback.",2,8,2
+"I appreciate your honesty about the mistake.",8,0,0
+"Nice, another disaster in progress.",2,8,3
+"Could you be more considerate next time?",7,0,2
+"Wow, that’s such a genius move.",2,9,2
+"Thank you for taking the time to review this.",9,0,0
+"Thanks for looping me in on this conversation.",9,0,0
+"Right, because waiting three hours for a reply is totally fine.",3,8,1
+"Please, take your time — deadlines are just suggestions.",3,9,1
+"I really appreciate your quick response.",10,0,0
+"Nice, another last-minute change. Love that.",3,8,2
+"Could we discuss this privately instead of in the group chat?",8,0,0
+"Awesome, another Monday morning surprise.",3,7,1
+"Please make sure to double-check before sending.",9,0,0
+"That was completely unprofessional.",2,0,7
+"Yeah, sure, it’s not like I had plans or anything.",2,8,2
+"Great work, your report was clear and concise.",9,0,0
+"Unbelievable, you actually did something right.",2,9,3
+"Please don’t speak to me like that again.",4,0,7
+"Perfect, now I can redo everything from scratch.",3,8,1
+"Thanks for clarifying that detail.",9,0,0
+"How considerate of you to send that at 2 a.m.",3,8,2
+"I’m grateful for your patience during this process.",10,0,0
+"Right, because blaming me always fixes things.",3,8,1
+"Could you provide more context in the next email?",8,0,0
+"You’re being completely unhelpful right now.",1,0,8
+"I appreciate your willingness to collaborate.",9,0,0
+"Sure, another meeting about meetings.",3,9,1
+"Please remain professional in your communication.",8,0,1
+"Wow, you managed to make it worse somehow.",2,8,3
+"Thanks for sending this over so quickly!",9,0,0
+"Yeah, I totally needed that obvious comment.",2,8,2
+"That’s unacceptable behavior in this environment.",1,0,8
+"Please confirm once you’ve reviewed the file.",8,0,0
+"Brilliant, another broken spreadsheet.",3,8,1
+"Thank you for being so understanding.",9,0,0
+"Right, because rushing always leads to quality results.",3,9,1
+"Your attitude today was very disrespectful.",1,0,8
+"I truly value your feedback on this matter.",9,0,0
+"Nice, another random idea with no plan behind it.",3,8,2
+"Please avoid that kind of language in the chat.",7,0,3
+"Thanks for helping me sort that out!",9,0,0
+"Of course, because my time clearly doesn’t matter.",2,8,2
+"I really appreciate your honesty in this situation.",10,0,0
+"Could you stop interrupting me during the meeting?",5,0,4
+"Wonderful, now the entire project is delayed.",3,8,2
+"Thank you for your thoughtful response.",9,0,0
+"Right, because that’s exactly what we needed — more confusion.",3,8,2
+"Let’s stay calm and work through this together.",9,0,0
+"Yeah, no, I totally wanted to redo this for the fifth time.",2,9,2
+"I’m sorry, but that comment was out of line.",7,0,5
+"Appreciate your effort to get this fixed today.",9,0,0
+"Perfect, another task with no instructions.",3,7,2
+"Thanks, but I didn’t need your sarcasm right now.",4,4,4
+"You’ve been extremely patient through this mess.",9,0,0
+"Lovely, another crisis to handle before lunch.",3,8,2
+"Stop wasting everyone’s time and do your job.",1,0,9
+"Thanks for the bare minimum, really inspiring.",2,7,5
+"Please don’t raise your voice during meetings.",7,0,4
+"Wow, you actually managed to make it worse.",2,8,6
+"Kindly review your mistakes before blaming others.",6,1,5
+"Sure, because ignoring deadlines always works.",3,9,2
+"I’ve had enough of your careless attitude.",2,0,8
+"Thank you for keeping me informed throughout the process.",9,0,0
+"Right, another brilliant idea that will crash and burn.",3,8,4
+"You’re being extremely disrespectful right now.",1,0,9
+"I appreciate your dedication despite the setbacks.",9,0,0
+"That comment was completely uncalled for.",3,0,8
+"Fantastic, yet another failure on your part.",2,8,7
+"Please learn to communicate properly next time.",5,0,6
+"That’s not feedback, that’s just being rude.",2,0,7
+"Great job ignoring the client’s request again.",3,8,6
+"I really appreciate your help today.",10,0,0
+"You talk a lot but rarely get things done.",2,2,8
+"Wow, thanks for doing the absolute least.",2,8,6
+"Please be more considerate when giving feedback.",8,0,1
+"Right, because that excuse was so convincing.",3,9,3
+"You’re impossible to work with sometimes.",1,1,8
+"Thanks for being so responsive and professional.",9,0,0
+"Your tone is completely unacceptable.",2,0,8
+"Wonderful, another missed deadline. Impressive.",3,9,4
+"Please remember we’re supposed to be a team.",8,0,1
+"Stop acting like you’re the only one working here.",1,0,9
+"Nice, you finally decided to contribute.",3,8,4
+"I appreciate your calm response in a stressful moment.",10,0,0
+"That’s not a solution, that’s another problem.",4,3,5
+"Could you stop blaming others for your mistakes?",3,0,7
+"Thanks for your patience while we fix this issue.",9,0,0
+"Brilliant, you made a simple task complicated again.",3,8,5
+"Please lower your tone, this isn’t productive.",7,0,3
+"Wow, what a surprise, another useless update.",2,9,4
+"I truly appreciate your effort to stay positive.",9,0,0
+"Do you even know what you’re doing?",1,2,9
+"Thanks for sharing your opinion, even though it’s wrong.",3,7,5
+"Let’s stay focused on the facts, not emotions.",8,0,1
+"That behavior was out of line and unprofessional.",2,0,8
+"Right, because insulting people always helps.",3,9,4
+"I’m grateful for your help on this project.",9,0,0
+"You need to take responsibility for your actions.",3,0,7
+"Perfect, you broke it again. Congratulations.",3,8,6
+"Please try not to make this mistake again.",7,0,2
+"That was a childish way to handle feedback.",2,0,7
+"Thanks, now we’re behind schedule thanks to you.",2,8,7
+"I really appreciate your constructive criticism.",10,0,0
+"Maybe listen next time instead of interrupting.",2,1,7
+"Wonderful teamwork — said no one ever.",2,9,5
+"Thank you for clarifying that point so quickly.",9,0,0
+"Right, because overcomplicating things is always smart.",3,8,3
+"Please remember to copy everyone relevant on the next email.",8,0,0
+"Wow, you managed to miss the simplest instruction.",2,8,6
+"I appreciate your feedback; I’ll work on that immediately.",9,0,0
+"That’s a very narrow way to look at the issue.",4,2,3
+"Great, another feature no one asked for.",3,8,3
+"I’m thankful for your continued collaboration.",10,0,0
+"Could we try to keep personal opinions out of this?",7,0,2
+"Perfect, another delay to explain to the client.",3,7,3
+"I appreciate your professionalism during this conflict.",9,0,0
+"Sure, because ignoring the problem will fix it.",3,9,3
+"Please, let’s make sure this doesn’t happen again.",8,0,1
+"You’re completely out of touch with reality.",1,1,9
+"Thank you for your hard work on this project.",10,0,0
+"Lovely, another message with no context at all.",3,8,2
+"Please make sure to follow the guidelines next time.",9,0,0
+"Fantastic, now the client’s upset again.",3,8,4
+"I’m grateful that you took the time to review my proposal.",9,0,0
+"Right, because last time went so well.",3,8,2
+"Please refrain from making personal comments.",8,0,3
+"Wow, amazing leadership — truly inspiring.",3,9,3
+"Thank you for catching that error before submission.",9,0,0
+"Stop pretending to understand the problem.",1,2,8
+"I appreciate your detailed explanation.",10,0,0
+"Sure, that’s exactly what we needed — more confusion.",3,8,3
+"Please check the document again for typos.",9,0,0
+"That was a waste of everyone’s time.",2,1,7
+"Thanks for being so quick to respond.",9,0,0
+"Of course, because responsibility isn’t your thing.",2,8,5
+"I appreciate the effort, even if it wasn’t perfect.",9,0,1
+"You’re making this harder than it needs to be.",2,1,7
+"Thanks again for your cooperation.",9,0,0
+"Brilliant, another crash right before the deadline.",3,8,3
+"Please communicate issues sooner next time.",8,0,2
+"I truly appreciate your patience with this delay.",9,0,0
+"Right, like that strategy worked before.",3,9,2
+"That’s not helpful, please stop.",2,0,6
+"Thank you for keeping a positive attitude.",9,0,0
+"Lovely, now we have two problems instead of one.",3,8,3
+"Please maintain a respectful tone in future emails.",8,0,2
+"Wow, your consistency in failure is impressive.",2,9,6
+"I’m grateful for your flexibility this week.",9,0,0
+"Sure, just take all the credit again.",3,9,4
+"Please double-check the numbers before posting.",9,0,0
+"That was unnecessary and rude.",2,0,8
+"Thanks for helping smooth things over with the client.",9,0,0
+"Yeah, because your input was so valuable last time.",3,8,4
+"I appreciate your help keeping everyone organized.",9,0,0
+"Perfect, another file named 'final_version_v12'.",3,8,3
+"Can we take this conversation to the Teams thread instead of email?",8,0,0
+"Wow, another message with no attachments. Classic.",3,8,2
+"Thanks for updating the task so quickly.",9,0,0
+"Please mute yourself if you’re not speaking.",8,0,0
+"Right, because background noise makes us all more productive.",3,9,2
+"I really appreciate how responsive you’ve been today.",10,0,0
+"Could you stop talking over people in the call?",4,0,6
+"Fantastic, another 30-minute meeting that solved nothing.",3,8,2
+"Please share your screen so we can all follow.",9,0,0
+"Nice, now everyone’s confused. Great job.",3,8,4
+"Thank you for summarizing the meeting notes.",9,0,0
+"Sure, let’s schedule another meeting about this meeting.",3,9,1
+"Please check the shared document before asking.",8,0,1
+"That comment came across as disrespectful.",3,0,7
+"Thanks for fixing the permissions issue.",9,0,0
+"Wonderful, Teams crashed again right before the presentation.",3,7,2
+"Could we stay on topic, please?",8,0,1
+"Yeah, let’s totally ignore the agenda again.",3,8,3
+"I appreciate you turning on your camera, it helps engagement.",9,0,0
+"Perfect, another person joined late with no context.",3,7,2
+"Thanks for handling that client escalation so calmly.",9,0,0
+"Please remember to tag the right person next time.",8,0,1
+"Sure, blame Teams for your lack of preparation.",3,9,4
+"That tone isn’t appropriate for this channel.",3,0,6
+"I really value your clear communication.",10,0,0
+"Right, because talking louder fixes everything.",3,9,2
+"Please keep side conversations in private chat.",8,0,1
+"Wow, another 'quick sync' that takes an hour.",3,8,2
+"Thanks for catching that bug on screen share.",9,0,0
+"Unbelievable, we’re discussing this again.",3,8,3
+"Could you please upload the final version to the channel?",9,0,0
+"Right, because sending ten files helps organization.",3,8,3
+"Please stop sharing unrelated memes during the meeting.",6,2,5
+"Appreciate you staying late to finish the task.",9,0,0
+"Sure, ignore my messages like usual.",3,9,3
+"Thanks for turning your mic back on, couldn’t hear you.",9,0,0
+"That was unnecessary — please stay professional.",4,0,6
+"I really appreciate your patience with the connection issues.",9,0,0
+"Perfect, now half the team dropped from the call.",3,8,2
+"Please double-check your status before setting to 'Away'.",8,0,0
+"Yeah, multitasking works so well for you.",3,9,3
+"Thank you for organizing the agenda ahead of time.",9,0,0
+"Could you mute notifications while presenting?",8,0,1
+"Right, let’s all pretend we read the document.",3,9,2
+"I’m grateful for how you handled that disagreement calmly.",9,0,0
+"Please share meeting notes in the project channel.",8,0,0
+"Wonderful, another broken link in the chat.",3,8,2
+"Thanks for checking the chat while I was presenting.",9,0,0
+"Sure, send another 'quick ping' while I’m talking.",3,8,2
+"Please avoid sarcasm during team discussions.",8,0,1
+"Thank you for keeping the chat respectful today.",10,0,0
+"I’d like to acknowledge the great progress this week.",10,0,0
+"Please make sure to inform me before changing deadlines.",8,0,1
+"That report didn’t meet expectations, let’s review it tomorrow.",6,0,3
+"I appreciate how you’ve been taking initiative lately.",9,0,0
+"Right, because missing the client call was a great look.",3,8,3
+"Thank you for mentoring the new team members.",10,0,0
+"Please address the tone in your last message, it came off as harsh.",7,0,3
+"I value your honesty, but we must stay professional.",8,0,2
+"Good effort, but we need more detail in your next report.",7,0,1
+"Wow, another budget error. Fantastic.",3,9,3
+"I appreciate your transparency regarding the issue.",9,0,0
+"Please remember to update your task status daily.",8,0,0
+"That comment wasn’t constructive; keep it respectful.",6,0,5
+"Thanks for going above and beyond this week.",10,0,0
+"Sure, ignoring the checklist again won’t cause any problems.",3,9,3
+"I’m pleased with how you handled that client complaint.",9,0,0
+"Let’s focus on finding solutions instead of blame.",8,0,1
+"Your message came across as dismissive — please rephrase.",6,0,4
+"I appreciate you staying proactive during the deadline rush.",9,0,0
+"Please deliver the final document by end of day.",8,0,0
+"That’s not the standard of quality we expect.",5,0,4
+"Thank you for coordinating across departments so effectively.",10,0,0
+"Kindly avoid using humor in sensitive conversations.",8,0,1
+"I appreciate your calm approach under pressure.",9,0,0
+"Sure, another typo in the title, very professional.",3,9,3
+"Let’s debrief after the presentation to discuss improvements.",8,0,0
+"Thanks for always being punctual in meetings.",10,0,0
+"Please review your tone before sending messages to clients.",7,0,2
+"Great work on simplifying the technical documentation.",9,0,0
+"That’s not appropriate for a public channel.",5,0,5
+"I truly value your contribution to this project.",10,0,0
+"Please send me a quick summary of today’s call.",8,0,0
+"Right, because delays are totally fine with the client.",3,8,3
+"Your consistency and communication have been excellent.",10,0,0
+"Let’s discuss the feedback privately to keep things constructive.",8,0,1
+"Please don’t interrupt while others are speaking.",7,0,3
+"Thanks for closing the sprint strong.",10,0,0
+"I expect higher accuracy in future reports.",6,0,2
+"Wonderful, another meeting without preparation.",3,8,3
+"I appreciate how you handled that conflict calmly.",9,0,0
+"Please proofread your messages before posting.",8,0,1
+"Your tone in chat has improved significantly — good job.",9,0,0
+"Right, because sarcasm always motivates people.",3,9,3
+"Thanks for ensuring everyone felt heard in today’s meeting.",10,0,0
+"Let’s aim to be more concise in written updates.",8,0,0
+"Please document your process so others can follow.",9,0,0
+"I appreciate your willingness to take ownership of mistakes.",10,0,0
+"That’s not how we give feedback in this team.",5,0,4
+"Thank you for representing the department so well.",10,0,0
+"Let’s follow up offline to address this concern.",8,0,0
+"Good initiative on proposing that workflow improvement.",9,0,0
+
+
+
+
+
