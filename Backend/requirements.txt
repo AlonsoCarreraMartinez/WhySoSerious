@@ -8,3 +8,7 @@ scikit-learn
 accelerate>=0.26.0
 scikit-learn>=1.2
 requests>=2.31
+fastapi
+uvicorn[standard]
+pymongo
+python-dotenv

@@ -1,0 +1,59 @@
+
+# Python basics
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual enviroment
+venv/
+ENV/
+env/
+.venv/
+
+# Private variables
+.env
+*.env
+
+# logs
+*.log
+logs/
+*.out
+*.txt~
+
+# HuggingFace and Pytorch 
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.h5
+*.joblib
+
+# Training model
+Backend/models/
+models/hf_bert_reg/
+!Backend/models/hf_bert_reg/vocab.txt
+
+# Local datasets
+datasets/
+*.tsv
+*.json
+*.xlsx
+
+# Misc
+.DS_Store
+Thumbs.db
+
+# VSCode configuration
+.vscode/
+
+# Python cache
+**/__pycache__/
+
+# Temporary files
+*.tmp
+*.swp
