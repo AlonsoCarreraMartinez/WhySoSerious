@@ -12,3 +12,9 @@ fastapi
 uvicorn[standard]
 pymongo
 python-dotenv
+botbuilder-core
+botbuilder-schema
+botbuilder-integration-aiohttp
+aiohttp
+bcrypt==3.2.0
+passlib[bcrypt]

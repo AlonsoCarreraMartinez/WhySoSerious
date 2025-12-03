@@ -7,12 +7,31 @@ from app.database import db
 from app.routers import users, teams
 from app.routers import auth
 from app.routers import burnout
+from botbuilder.core import BotFrameworkAdapter, BotFrameworkAdapterSettings
+from botbuilder.schema import Activity
+from app.bot import WhySoSeriousBot
+from fastapi import Request, Response
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+import os
 
 # python -m venv .venv
 # uvicorn app.main:app --reload
-#http://127.0.0.1:8000/docs
+# http://127.0.0.1:8000/docs
+
+bot_settings = BotFrameworkAdapterSettings(os.getenv("MICROSOFT_APP_ID", ""), os.getenv("MICROSOFT_APP_PASSWORD", ""))
+bot_adapter = BotFrameworkAdapter(bot_settings)
+my_bot = WhySoSeriousBot()
 
 app = FastAPI(title="WhySoSerious Backend")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(users.router)
 app.include_router(teams.router)
@@ -73,3 +92,37 @@ def new_message(payload: NewMessageRequest):
     block["_id"] = str(result.inserted_id)
 
     return block
+
+# Endpoint to connect to the emulator
+@app.post("/api/messages")
+async def messages(req: Request):
+    if "application/json" in req.headers.get("content-type", ""):
+        body = await req.json()
+    else:
+        return Response(status_code=415)
+
+    activity = Activity().deserialize(body)
+    auth_header = req.headers.get("Authorization", "")
+
+    try:
+        response = await bot_adapter.process_activity(activity, auth_header, my_bot.on_turn)
+        if response:
+            return response
+        return Response(status_code=201)
+    except Exception as e:
+        print(f"Error procesando mensaje: {e}")
+        return Response(status_code=500)
+    
+
+@app.get("/api/messages")
+async def prueba_navegador():
+    return "The server it's okay."
+
+# NGROK
+frontend_path = os.path.join(os.getcwd(), "..", "frontend", "dist")
+
+if os.path.exists(frontend_path):
+    app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
+    print(f" Frontend mounted from {frontend_path}")
+else:
+    print("The folder doesn't found, maybe you don't execute 'npm run build'")

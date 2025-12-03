@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from app.database import db
 from app.models import Team
 from fastapi import Depends, HTTPException
-from app.services.auth import get_current_user
+from app.dependencies import get_current_user
 
 router = APIRouter(prefix="/teams", tags=["Teams"])
 

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.services.burnout import get_user_burnout, get_team_burnout
-from app.services.auth import get_current_user
+from app.dependencies import get_current_user
 
 router = APIRouter(prefix="/burnout", tags=["Burnout"])
 

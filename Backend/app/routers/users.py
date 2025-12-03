@@ -3,7 +3,7 @@ from app.database import db
 from app.models import User
 from app.auth import hash_password
 from fastapi import Depends, HTTPException
-from app.services.auth import get_current_user
+from app.dependencies import get_current_user
 
 router = APIRouter(prefix="/users", tags=["Users"])
 

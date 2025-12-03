@@ -1,0 +1,9 @@
+version: "2"
+authtoken: 36Ka9Ury8OK2WfBuzpm7xz6Anuf_3um3NtmpSwQs1woy8EHg
+tunnels:
+  backend:
+    proto: http
+    addr: 8000
+
+# ngrok start --all --config=ngrok.yml
+# taskkill /f /im ngrok.exe

@@ -1,5 +1,9 @@
+from fastapi import APIRouter, HTTPException
 from datetime import datetime, timedelta
 from app.database import db
+
+# Define the router
+router = APIRouter(prefix="/burnout", tags=["Burnout"])
 
 # Converts strings like '1w', '3d', '1m' into a timedelta.
 def parse_period(period: str):
@@ -15,7 +19,7 @@ def parse_period(period: str):
 
     raise ValueError("Invalid period format. Use '1w', '3d', '1m', etc.")
 
-# Receives a list of scores objects: [{politeness, sarcasm, toxicity}, {...}] annd computes average burnout indicators.
+# Receives a list of scores objects: [{politeness, sarcasm, toxicity}] and computes average burnout indicators.
 def compute_burnout(scores_list: list):
     
     if not scores_list:
@@ -67,8 +71,22 @@ def get_team_burnout(team_name: str, period: str):
     scores_list = []
 
     for block in blocks:
-        for msg in block["messages"]:
-            if msg["user"] in team["members"]:
-                scores_list.append(msg["scores"])
+        if "aggregated_scores" in block:
+            scores_list.append(block["aggregated_scores"])
 
     return compute_burnout(scores_list)
+
+# Public endpoint for the Team Dashboard
+@router.get("/team")
+def burnout_by_team(team: str, period: str):
+    
+    result = get_team_burnout(team, period)
+    
+    if result is None:
+        raise HTTPException(status_code=404, detail="Team not found")
+        
+    return {"team": team, "period": period, "burnout": result}
+
+@router.get("/user")
+def burnout_by_user(user: str, period: str):
+    return {"message": "Use the /team endpoint for the team dashboard"}
