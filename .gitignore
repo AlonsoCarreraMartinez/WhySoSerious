@@ -41,7 +41,6 @@ models/hf_bert_reg/
 # Local datasets
 datasets/
 *.tsv
-*.json
 *.xlsx
 
 # Misc
