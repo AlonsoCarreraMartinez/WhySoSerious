@@ -1,89 +1,103 @@
+import pymongo
+from pymongo import MongoClient
 import sys
 import os
-import random
-from datetime import datetime
+from dotenv import load_dotenv
+import bcrypt
 
-sys.path.append(os.getcwd())
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 
-from app.database import db
-from app.auth import hash_password
+MONGO_URI = os.getenv("MONGO_URI")
+DB_NAME = "whysoserious_db"
 
-def seed_database():
-    
-    db.users.delete_many({})
-    db.teams.delete_many({})
-    db.message_blocks.delete_many({})
-    
-    db.users.insert_one({
-        "_id": "Guillermo",
-        "username": "Guillermo",
+COLLECTION_USERS = "users"
+COLLECTION_TEAMS = "teams"
+
+TEAM_A = "Team A"
+
+def get_password_hash(password):
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+ADMIN_EMAIL = "admin@ww5dl.onmicrosoft.com"
+MANAGER_EMAIL = "alonso@ww5dl.onmicrosoft.com"
+USER_EMAIL = "adele.vance@ww5dl.onmicrosoft.com"
+
+users = [
+    {
+        "_id": ADMIN_EMAIL,
+        "username": ADMIN_EMAIL,
+        "name": "Guillermo Admin",
+        "email": ADMIN_EMAIL,
+        "password": get_password_hash("password123"),
         "role": "admin",
-        "teams": [], 
-        "password": hash_password("1234")
-    })
+        "teams": [TEAM_A] 
+    },
+    {
+        "_id": MANAGER_EMAIL,
+        "username": MANAGER_EMAIL,
+        "name": "Alonso Manager",
+        "email": MANAGER_EMAIL,
+        "password": get_password_hash("password123"),
+        "role": "manager",
+        "teams": [TEAM_A] # Todos en Team A
+    },
+    {
+        "_id": USER_EMAIL,
+        "username": USER_EMAIL,
+        "name": "Adele Vance",
+        "email": USER_EMAIL,
+        "password": get_password_hash("password123"),
+        "role": "user",
+        "teams": [TEAM_A] # Todos en Team A
+    }
+]
 
-    # Team names
-    teams_list = ["Team-Alpha", "Team-Beta", "Team-Gamma"]
-    users_per_team = 3
-    
-   
-    for team_name in teams_list:
-       
-        team_suffix = team_name.split('-')[1] 
+teams = [
+    {
+        "_id": TEAM_A,
+        "name": TEAM_A,
+        "manager": MANAGER_EMAIL, # Alonso es el manager
+        "members": [ADMIN_EMAIL, MANAGER_EMAIL, USER_EMAIL] # Todos son miembros
+    }
+]
+
+def seed_db():
+    if not MONGO_URI:
+        print("ERROR: MONGO_URI not found in .env")
+        return
+
+    client = None
+    try:
+        print("Connecting to MongoDB Atlas Cluster...")
+        client = MongoClient(MONGO_URI)
+        db = client[DB_NAME]
         
-        members = []
-        team_manager = ""
+        client.admin.command('ping')
+        print("Connected to Cluster.")
+
+        users_coll = db[COLLECTION_USERS]
+        users_coll.delete_many({}) 
+        users_coll.insert_many(users)
+        print(f"Inserted {len(users)} users.")
+
+        teams_coll = db[COLLECTION_TEAMS]
+        teams_coll.delete_many({}) 
+        teams_coll.insert_many(teams)
+        print(f"Inserted {len(teams)} teams.")
         
-        # Create users 
-        for i in range(1, users_per_team + 1):
-            username = f"User-{team_suffix}-{i}"
-            members.append(username)
-            
-            # Assign first user of the team as the manager
-            role = "user"
-            if i == 1:
-                role = "manager"
-                team_manager = username 
-            
-            # Insert User
-            db.users.insert_one({
-                "_id": username,
-                "username": username,
-                "role": role,
-                "teams": [team_name],
-                "password": hash_password("1234")
-            })
-            
-            # Create messages 
-            num_msgs = random.randint(1, 2)
-            for _ in range(num_msgs):
-                scores = {
-                    "politeness": round(random.uniform(1, 10), 2),
-                    "sarcasm": round(random.uniform(0, 5), 2),
-                    "toxicity": round(random.uniform(0, 3), 2)
-                }
-                
-                msg_data = {
-                    "user": username,
-                    "message": f"Auto-generated message from {username}",
-                    "timestamp": datetime.utcnow(),
-                    "scores": scores
-                }
-                
-                db.message_blocks.insert_one({
-                    "start_time": datetime.utcnow(),
-                    "end_time": datetime.utcnow(),
-                    "participants": [username],
-                    "messages": [msg_data],
-                    "aggregated_scores": scores
-                })
-        
-        # Create teams
-        db.teams.insert_one({
-            "_id": team_name,
-            "manager": team_manager, 
-            "members": members
-        })
-      
+        print("\nACCESS SUMMARY")
+        print(f"Admin:   {ADMIN_EMAIL}")
+        print(f"Manager: {MANAGER_EMAIL}")
+        print(f"User:    {USER_EMAIL}")
+        print(f"All added to: {TEAM_A}")
+
+    except Exception as e:
+        print(f"CRITICAL ERROR: {e}")
+    finally:
+        if client:
+            client.close()
+            print("Connection closed.")
+
 if __name__ == "__main__":
-    seed_database()
+    seed_db()

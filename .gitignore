@@ -41,7 +41,11 @@ models/hf_bert_reg/
 # Local datasets
 datasets/
 *.tsv
+*.json
 *.xlsx
+
+# Plugin
+!manifest.json
 
 # Misc
 .DS_Store
