@@ -18,3 +18,4 @@ botbuilder-integration-aiohttp
 aiohttp
 bcrypt==3.2.0
 passlib[bcrypt]
+werkzeug

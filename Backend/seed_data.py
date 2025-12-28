@@ -1,103 +1,117 @@
-import pymongo
-from pymongo import MongoClient
-import sys
 import os
+from pymongo import MongoClient
+from werkzeug.security import generate_password_hash
 from dotenv import load_dotenv
-import bcrypt
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-load_dotenv(os.path.join(BASE_DIR, '.env'))
 
+load_dotenv()
 MONGO_URI = os.getenv("MONGO_URI")
 DB_NAME = "whysoserious_db"
 
-COLLECTION_USERS = "users"
-COLLECTION_TEAMS = "teams"
+if not MONGO_URI:
+    print("ERROR: MONGO_URI not found in .env file")
+    exit()
 
-TEAM_A = "Team A"
+def seed_database():
+    print("Starting data seeding...")
+    
+    client = MongoClient(MONGO_URI)
+    db = client[DB_NAME]
 
-def get_password_hash(password):
-    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    
+    print("Clearing old collections (users, teams)...")
+    db.users.drop()
+    db.teams.drop()
 
-ADMIN_EMAIL = "admin@ww5dl.onmicrosoft.com"
-MANAGER_EMAIL = "alonso@ww5dl.onmicrosoft.com"
-USER_EMAIL = "adele.vance@ww5dl.onmicrosoft.com"
+    default_password = generate_password_hash("password123")
 
-users = [
-    {
-        "_id": ADMIN_EMAIL,
-        "username": ADMIN_EMAIL,
-        "name": "Guillermo Admin",
-        "email": ADMIN_EMAIL,
-        "password": get_password_hash("password123"),
-        "role": "admin",
-        "teams": [TEAM_A] 
-    },
-    {
-        "_id": MANAGER_EMAIL,
-        "username": MANAGER_EMAIL,
-        "name": "Alonso Manager",
-        "email": MANAGER_EMAIL,
-        "password": get_password_hash("password123"),
-        "role": "manager",
-        "teams": [TEAM_A] # Todos en Team A
-    },
-    {
-        "_id": USER_EMAIL,
-        "username": USER_EMAIL,
-        "name": "Adele Vance",
-        "email": USER_EMAIL,
-        "password": get_password_hash("password123"),
-        "role": "user",
-        "teams": [TEAM_A] # Todos en Team A
-    }
-]
+    users = [
+       
+        {
+            "_id": "alonso@ww5dl.onmicrosoft.com",
+            "name": "Alonso Carrera",
+            "role": "admin",
+            "teams": ["Oviedo", "La Bañeza", "León"],
+            "password": default_password
+        },
+        {
+            "_id": "admin@ww5dl.onmicrosoft.com",
+            "name": "Guillermo Menguez",
+            "role": "admin", 
+            "teams": ["Oviedo", "La Bañeza", "León"],
+            "password": default_password
+        },
+      
+        {
+            "_id": "AdeleV@ww5dl.onmicrosoft.com",
+            "name": "Adele Vance",
+            "role": "employee",
+            "teams": ["Oviedo", "La Bañeza"],
+            "password": default_password
+        },
+        {
+            "_id": "LidiaH@ww5dl.onmicrosoft.com",
+            "name": "Lidia Holloway",
+            "role": "employee",
+            "teams": ["La Bañeza", "León"],
+            "password": default_password
+        },
+        {
+            "_id": "IsaiahL@ww5dl.onmicrosoft.com",
+            "name": "Isaiah Langer",
+            "role": "employee",
+            "teams": ["La Bañeza", "León"],
+            "password": default_password
+        },
+        {
+            "_id": "PattiF@ww5dl.onmicrosoft.com",
+            "name": "Patti Fernandez",
+            "role": "employee",
+            "teams": ["León"],
+            "password": default_password
+        }
+    ]
 
-teams = [
-    {
-        "_id": TEAM_A,
-        "name": TEAM_A,
-        "manager": MANAGER_EMAIL, # Alonso es el manager
-        "members": [ADMIN_EMAIL, MANAGER_EMAIL, USER_EMAIL] # Todos son miembros
-    }
-]
+    db.users.insert_many(users)
+    print(f"{len(users)} Users created.")
 
-def seed_db():
-    if not MONGO_URI:
-        print("ERROR: MONGO_URI not found in .env")
-        return
+    teams = [
+        {
+            "_id": "Oviedo",
+            "manager": "alonso@ww5dl.onmicrosoft.com",
+            "members": [
+                "alonso@ww5dl.onmicrosoft.com", 
+                "admin@ww5dl.onmicrosoft.com", 
+                "AdeleV@ww5dl.onmicrosoft.com"
+            ]
+        },
+        {
+            "_id": "La Bañeza",
+            "manager": "alonso@ww5dl.onmicrosoft.com",
+            "members": [
+                "alonso@ww5dl.onmicrosoft.com", 
+                "admin@ww5dl.onmicrosoft.com", 
+                "LidiaH@ww5dl.onmicrosoft.com",
+                "IsaiahL@ww5dl.onmicrosoft.com",
+                "AdeleV@ww5dl.onmicrosoft.com"
+            ]
+        },
+        {
+            "_id": "León",
+            "manager": "alonso@ww5dl.onmicrosoft.com",
+            "members": [
+                "alonso@ww5dl.onmicrosoft.com", 
+                "admin@ww5dl.onmicrosoft.com", 
+                "LidiaH@ww5dl.onmicrosoft.com",
+                "PattiF@ww5dl.onmicrosoft.com",
+                "IsaiahL@ww5dl.onmicrosoft.com"
+            ]
+        }
+    ]
 
-    client = None
-    try:
-        print("Connecting to MongoDB Atlas Cluster...")
-        client = MongoClient(MONGO_URI)
-        db = client[DB_NAME]
-        
-        client.admin.command('ping')
-        print("Connected to Cluster.")
-
-        users_coll = db[COLLECTION_USERS]
-        users_coll.delete_many({}) 
-        users_coll.insert_many(users)
-        print(f"Inserted {len(users)} users.")
-
-        teams_coll = db[COLLECTION_TEAMS]
-        teams_coll.delete_many({}) 
-        teams_coll.insert_many(teams)
-        print(f"Inserted {len(teams)} teams.")
-        
-        print("\nACCESS SUMMARY")
-        print(f"Admin:   {ADMIN_EMAIL}")
-        print(f"Manager: {MANAGER_EMAIL}")
-        print(f"User:    {USER_EMAIL}")
-        print(f"All added to: {TEAM_A}")
-
-    except Exception as e:
-        print(f"CRITICAL ERROR: {e}")
-    finally:
-        if client:
-            client.close()
-            print("Connection closed.")
+    db.teams.insert_many(teams)
+    print(f"{len(teams)} Teams created.")
+    print("Database ready to receive messages.")
 
 if __name__ == "__main__":
-    seed_db()
+    seed_database()

@@ -1,9 +1,9 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
 
 
 class User(BaseModel):
-    username: str
+    username: str = Field(alias="_id")
     name: str   
     email: str  
     role: str   # "admin", "manager", "user"
@@ -12,7 +12,7 @@ class User(BaseModel):
 
 
 class Team(BaseModel):
-    name: str
+    name: str = Field(alias="_id")
     manager: str
     members: List[str]
 
@@ -28,7 +28,10 @@ class MessageDB(BaseModel):
     content: str
     sender: str
     timestamp: str 
-    platform: str
+    teamId: Optional[str] = None      
+    teamName: Optional[str] = None    
+    channelId: Optional[str] = None   
+    channelName: Optional[str] = None 
     analyzed: bool = False
     scores: Optional[BertScores] = None 
 
