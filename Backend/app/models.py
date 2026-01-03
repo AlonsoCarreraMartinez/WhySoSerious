@@ -15,11 +15,17 @@ class BertScores(BaseModel):
     sarcasm: float
     toxicity: float
 
-    
+class Channel(BaseModel):
+    id: str = Field(alias="_id")
+    name: str 
+    team_name: str
+    burnout_mean: Optional[BertScores] = None
+
 class Team(BaseModel):
     name: str = Field(alias="_id")
     manager: str
     members: List[str]
+    channels: List[str] = []
     burnout_mean: Optional[BertScores] = None
 
 

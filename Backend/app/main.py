@@ -7,6 +7,7 @@ from app.database import db
 from app.routers import users, teams
 from app.routers import auth
 from app.routers import burnout
+from app.routers import channels
 from botbuilder.core import BotFrameworkAdapter, BotFrameworkAdapterSettings
 from botbuilder.schema import Activity
 from app.bot import WhySoSeriousBot
@@ -37,6 +38,7 @@ app.include_router(users.router)
 app.include_router(teams.router)
 app.include_router(auth.router)
 app.include_router(burnout.router)
+app.include_router(channels.router)
 
 class AnalyzeRequest(BaseModel):
     text: str

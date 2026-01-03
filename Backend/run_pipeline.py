@@ -1,13 +1,12 @@
 import time
 from teams_extractor import main as run_extractor
 from analyze_data import analyze_message_batch as run_analyzer
-from calculate_team_metrics import calculate_and_update_team_means as run_metrics
+from calculate_team_metrics import calculate_and_update_metrics as run_metrics
 
 def main():
     print("STARTING DATA UPDATE PIPELINE")
     print("=================================================")
     
-    # STEP 1: Extraction
     print("\n[1/3] Extracting data from Microsoft Teams...")
     try:
         run_extractor()
