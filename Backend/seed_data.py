@@ -83,7 +83,8 @@ def seed_database():
                 "alonso@ww5dl.onmicrosoft.com", 
                 "admin@ww5dl.onmicrosoft.com", 
                 "AdeleV@ww5dl.onmicrosoft.com"
-            ]
+            ],
+            "burnout_mean": None
         },
         {
             "_id": "La Bañeza",
@@ -94,7 +95,8 @@ def seed_database():
                 "LidiaH@ww5dl.onmicrosoft.com",
                 "IsaiahL@ww5dl.onmicrosoft.com",
                 "AdeleV@ww5dl.onmicrosoft.com"
-            ]
+            ],
+            "burnout_mean": None
         },
         {
             "_id": "León",
@@ -105,7 +107,8 @@ def seed_database():
                 "LidiaH@ww5dl.onmicrosoft.com",
                 "PattiF@ww5dl.onmicrosoft.com",
                 "IsaiahL@ww5dl.onmicrosoft.com"
-            ]
+            ],
+            "burnout_mean": None
         }
     ]
 

@@ -21,7 +21,8 @@ def create_team(team: Team, current_user = Depends(get_current_user)):
         "_id": team.name, 
         "name": team.name, 
         "manager": team.manager,
-        "members": team.members
+        "members": team.members,
+        "burnout_mean": team.burnout_mean.model_dump() if team.burnout_mean else None
     })
     return {"message": "Team created", "team": team.name}
 
@@ -37,3 +38,8 @@ def get_team_info(team: str, current_user = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Team not found")
 
     return {"message": f"Team data for {team}", "data": team_data}
+
+@router.get("/dashboard", response_model=list)
+def get_dashboard_data():
+    teams = list(db.teams.find({}, {"_id": 1, "burnout_mean": 1}))
+    return teams

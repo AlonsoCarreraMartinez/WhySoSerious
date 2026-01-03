@@ -10,17 +10,17 @@ class User(BaseModel):
     teams: List[str]
     password: str
 
-
-class Team(BaseModel):
-    name: str = Field(alias="_id")
-    manager: str
-    members: List[str]
-
-
 class BertScores(BaseModel):
     politeness: float
     sarcasm: float
     toxicity: float
+
+    
+class Team(BaseModel):
+    name: str = Field(alias="_id")
+    manager: str
+    members: List[str]
+    burnout_mean: Optional[BertScores] = None
 
 
 class MessageDB(BaseModel):

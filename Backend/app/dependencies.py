@@ -18,3 +18,6 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
 
     user["username"] = user["_id"]
     return user
+from fastapi import HTTPException
+from app.database import db
+

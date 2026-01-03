@@ -26,6 +26,7 @@ def create_user(user: User):
     
     return {"message": "User created", "user": user.username}
 
+
 @router.get("/admin-only")
 def admin_only(current_user = Depends(get_current_user)):
     if current_user["role"] != "admin":
