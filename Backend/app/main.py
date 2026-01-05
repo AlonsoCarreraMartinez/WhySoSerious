@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List
 from datetime import datetime
-from app.services.bert_inference import analyze_text
+from app.services.bert_inference import BertPredictor
 from app.database import db
 from app.routers import users, teams
 from app.routers import auth
@@ -20,9 +20,12 @@ import os
 # uvicorn app.main:app --reload
 # http://127.0.0.1:8000/docs
 
+print("--- INICIANDO SERVIDOR Y CARGANDO IA ---")
+predictor = BertPredictor()
+
 bot_settings = BotFrameworkAdapterSettings(os.getenv("MICROSOFT_APP_ID", ""), os.getenv("MICROSOFT_APP_PASSWORD", ""))
 bot_adapter = BotFrameworkAdapter(bot_settings)
-my_bot = WhySoSeriousBot()
+my_bot = WhySoSeriousBot(predictor)
 
 app = FastAPI(title="WhySoSerious Backend")
 
@@ -64,7 +67,7 @@ def new_message(payload: NewMessageRequest):
 
     analyzed_messages = []
     for msg in payload.messages:
-        scores = analyze_text(msg.message)
+        scores = predictor.predict(msg.message)
         analyzed_messages.append({
             "user": msg.user,
             "message": msg.message,
