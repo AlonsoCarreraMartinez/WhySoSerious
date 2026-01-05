@@ -35,8 +35,10 @@ logs/
 
 # Training model
 Backend/models/
-models/hf_bert_reg/
-!Backend/models/hf_bert_reg/vocab.txt
+models/
+*.bin
+*.pt
+*.safetensors
 
 # Local datasets
 datasets/

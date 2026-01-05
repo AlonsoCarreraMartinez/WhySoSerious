@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-
+// npm run dev
 function App() {
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);

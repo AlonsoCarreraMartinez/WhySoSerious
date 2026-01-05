@@ -1,66 +1,126 @@
-import torch # PyTorch
-import numpy as np # Math operations.
-import requests  # Ollama
-import json 
-from transformers import AutoTokenizer, AutoModelForSequenceClassification # Hugging Face toolkit for BERT.
+import os
+import torch
+import numpy as np
+from transformers import pipeline
 
-MODEL_DIR = "models/hf_bert_reg"
-MAX_LENGTH = 256
-OLLAMA_MODEL = "llama3:instruct"
+class BertPredictor:
+    def __init__(self, model_dir="models/hf_bert_reg"):
+        """
+        Initializes the 3 specialist pipelines from the local directory.
+        """
+        print(f"--- LOADING MODELS FROM: {model_dir} ---")
+        try:
+            # TOXICITY
+            toxic_path = os.path.join(model_dir, "toxicity")
+            self.toxic_pipe = pipeline("text-classification", model=toxic_path, tokenizer=toxic_path, top_k=None)
 
-# Calls local Ollama model to translate Spanish text to English.
-def translate_to_english(text: str) -> str:
-    prompt = f"Translate this text from Spanish to English, keeping tone and meaning:\n\n{text}"
-    try:
-        response = requests.post(
-            "http://localhost:11434/api/generate",
-            json={"model": OLLAMA_MODEL, "prompt": prompt},
-            stream=True,  
-            timeout=30
-        )
-        response.raise_for_status()
-        translated = ""
-        for line in response.iter_lines(decode_unicode=True):
-            if line.strip():
-                try:
-                    data = json.loads(line)
-                    if "response" in data:
-                        translated += data["response"]
-                except json.JSONDecodeError:
-                    pass  
+            # SARCASM
+            sarcasm_path = os.path.join(model_dir, "sarcasm")
+            self.sarcasm_pipe = pipeline("text-classification", model=sarcasm_path, tokenizer=sarcasm_path, top_k=None)
 
-        return translated.strip() or text
-    except Exception as e:
-        print(f"[WARN] Translation failed ({e}), using original text.")
-        return text
+            # POLITENESS 
+            politeness_path = os.path.join(model_dir, "politeness")
+            self.sentiment_pipe = pipeline("sentiment-analysis", model=politeness_path, tokenizer=politeness_path, top_k=None)
+            
+            print("--- MODELS LOADED SUCCESSFULLY ---")
+            
+        except Exception as e:
+            print(f"[ERROR] Failed to load models: {e}")
+            self.toxic_pipe = None
 
+    def predict(self, text):
+        if not text or not self.toxic_pipe:
+            return {"politeness": 0.0, "sarcasm": 0.0, "toxicity": 0.0}
 
-tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR) # Load the tokenizer that converts text into numerical tokens.
-model = AutoModelForSequenceClassification.from_pretrained(MODEL_DIR) # Load the fine-tuned BERT model saved after training.
-model.eval() # Set the model to evaluation mode
+        try:
+            text_lower = text.lower()
+            word_count = len(text.split())
 
-print("Type a sentence to analyze or 'exit' to quit.\n")
+            # TOXICITY 
+            # Extract score if label is toxic, insult, threat, etc.
+            toxic_results = self.toxic_pipe(text)[0]
+            toxic_scores = []
+            target_labels = ['toxicity', 'severe_toxicity', 'insult', 'threat', 'obscene', 'identity_attack']
+            for res in toxic_results:
+                if res['label'] in target_labels:
+                    toxic_scores.append(res['score'])
+            toxic_score = max(toxic_scores) if toxic_scores else 0.0
+            
+            # SARCASM 
+            sarcasm_results = self.sarcasm_pipe(text)[0]
+            sarcasm_score = 0.0
+            for res in sarcasm_results:
+                if res['label'] == 'irony':
+                    sarcasm_score = res['score']
 
-# python predict_bert.py
-while True:
-    text = input("TEXT: ")
+            # POLITENESS 
+            sent_results = self.sentiment_pipe(text)[0]
+            top_sentiment = max(sent_results, key=lambda x: x['score'])
+            label = top_sentiment['label']
+            score = top_sentiment['score']
 
-    if text.lower().strip() == "exit":
-        break
+            politeness_score = 5.0
+            if label == 'positive':
+                politeness_score = 5.0 + (score * 5.0)
+            elif label == 'neutral':
+                politeness_score = 5.0
+            elif label == 'negative':
+                politeness_score = 5.0 - (score * 5.0)
 
-    translated = translate_to_english(text) 
+            
+            # Short text filter (Anti-Noise)
+            if word_count < 4 and toxic_score < 0.3:
+                sarcasm_score *= 0.2
 
-    inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=MAX_LENGTH) # Tokenize the input text
+            # status update filter (Technical Context)
+            # If it contains "successfully", "fixed", "resolved", etc., reduce sarcasm.
+            status_keywords = ["successfully", "fixed", "resolved", "completed", "scheduled", "maintenance", "updated", "deployed"]
+            is_status_msg = any(word in text_lower for word in status_keywords)
+            
+            if is_status_msg and toxic_score < 0.3:
+                sarcasm_score *= 0.2 
 
-    with torch.no_grad(): # Get predictions
-        outputs = model(**inputs)
-        logits = outputs.logits.squeeze(0).cpu().numpy()
+            # Condescending Phrase Filter 
+            # If the user uses condescending language, force Politeness down.
+            condescending_phrases = ["maybe you should", "i guess i have to", "clearly you didn't", "obvious", "explain everything"]
+            if any(phrase in text_lower for phrase in condescending_phrases):
+                # Force politeness to be at most 3.0 (Rude)
+                politeness_score = min(politeness_score, 3.0)
 
-    scores = np.clip(logits, 0.0, 10.0)
+            # sarcastic praise inversion 
+            # If Sarcasm is HIGH and Politeness is high, invert Politeness.
+            if sarcasm_score * 10.0 > 7.5 and politeness_score > 6.0:
+                 politeness_score = max(0.0, 10.0 - politeness_score)
 
-    print({ # Results
-        "politeness": round(float(scores[0]), 2),
-        "sarcasm": round(float(scores[1]), 2),
-        "toxicity": round(float(scores[2]), 2),
-    })
-    print()  
+            # politness boost (Magic Words)
+            # Only if not sarcastic.
+            polite_keywords = ["please", "thank", "appreciate", "kindly", "excuse me", "grateful"]
+            if any(word in text_lower for word in polite_keywords):
+                if sarcasm_score * 10.0 < 7.5:
+                    if politeness_score < 7.0: politeness_score = 7.5
+                    else: politeness_score = min(10.0, politeness_score + 1.0)
+
+            # passive aggression detection
+            # If Politeness is low (< 3.5) but Toxicity is 0, add artificial toxicity.
+            if politeness_score < 3.5 and toxic_score < 0.2:
+                toxic_score += 0.25 
+
+    
+            return {
+                "politeness": round(float(np.clip(politeness_score, 0.0, 10.0)), 2),
+                "sarcasm": round(float(np.clip(sarcasm_score * 10.0, 0.0, 10.0)), 2),
+                "toxicity": round(float(np.clip(toxic_score * 10.0, 0.0, 10.0)), 2)
+            }
+
+        except Exception as e:
+            print(f"[ERROR] Prediction failed: {e}")
+            return {"politeness": 0.0, "sarcasm": 0.0, "toxicity": 0.0}
+
+if __name__ == "__main__":
+    predictor = BertPredictor()
+    print("\nType a sentence to analyze or 'exit' to quit.\n")
+    while True:
+        text = input("TEXT: ")
+        if text.lower().strip() == "exit": break
+        print(predictor.predict(text))
+        print()
