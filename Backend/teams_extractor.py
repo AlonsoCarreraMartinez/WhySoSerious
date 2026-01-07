@@ -31,6 +31,9 @@ new_messages_count = 0
 skipped_messages_count = 0
 
 def get_access_token():
+    if "HEADLESS_TOKEN" in os.environ:
+        return os.environ["HEADLESS_TOKEN"]
+
     app = msal.PublicClientApplication(CLIENT_ID, authority=AUTHORITY)
     accounts = app.get_accounts()
     if accounts:
