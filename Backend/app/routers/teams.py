@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Header
 from app.database import db
 from app.models import Team
 from fastapi import Depends, HTTPException
@@ -40,15 +40,23 @@ def get_team_info(team: str, current_user = Depends(get_current_user)):
 
     return {"message": f"Team data for {team}", "data": team_data}
 
-'''
-@router.get("/dashboard", response_model=list)
-def get_dashboard_data():
-    teams = list(db.teams.find({}, {"_id": 1, "burnout_mean": 1}))
-    return teams'''
 
-@router.get("/dashboard") 
-def get_dashboard_data():
+@router.get("/dashboard")
+def get_dashboard_data(x_user_email: str = Header(None, alias="X-User-Email")):
+    if not x_user_email:
+        return []
+
+    user = db.users.find_one({"_id": x_user_email})
+
+    if not user:
+        return []
+
+    match_stage = {} 
+    if user.get("role") != "admin":
+        match_stage = {"manager": x_user_email}
+
     pipeline = [
+        { "$match": match_stage },
         {
             "$lookup": {
                 "from": "channels",
@@ -59,14 +67,15 @@ def get_dashboard_data():
         },
         {
             "$project": {
-                "_id": 1,
-                "burnout_mean": 1,
+                "_id": 1, 
+                "name": 1, 
+                "manager": 1, 
+                "burnout_mean": 1, 
                 "channel_details": 1 
             }
         }
     ]
     
- 
-    teams = list(db.teams.aggregate(pipeline))    
+    teams = list(db.teams.aggregate(pipeline))
     return teams
 

@@ -6,7 +6,7 @@ class User(BaseModel):
     username: str = Field(alias="_id")
     name: str   
     email: str  
-    role: str   # "admin", "manager", "user"
+    role: str   # "admin", "manager", "employee"
     teams: List[str]
     password: str
 

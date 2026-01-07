@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-// npm run dev
+
+
+const CURRENT_USER_EMAIL = "admin@ww5dl.onmicrosoft.com"; // TEST
+// employee = "AdeleV@ww5dl.onmicrosoft.com"; 
+// manager = alonso@ww5dl.onmicrosoft.com
+// admin = admin@ww5dl.onmicrosoft.com
+
 function App() {
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -10,7 +16,14 @@ function App() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get(API_URL);
+        console.log(`Fetching data as: ${CURRENT_USER_EMAIL}`);
+
+        const response = await axios.get(API_URL, {
+            headers: {
+                "X-User-Email": CURRENT_USER_EMAIL
+            }
+        });
+
         setTeams(response.data);
         setLoading(false);
       } catch (error) {
@@ -31,76 +44,83 @@ function App() {
     <div style={styles.container}>
       <header style={styles.header}>
         <h1 style={styles.title}>WhySoSerious Dashboard</h1>
-        <p>Real-time monitoring of team status</p>
+        <p>Viewing as: <strong>{CURRENT_USER_EMAIL}</strong></p>
       </header>
 
-      <div style={styles.grid}>
-        {teams.map((team) => (
-          <div key={team._id} style={styles.card}>
-            <h2 style={styles.teamName}>{team._id}</h2>
-            
-            <div style={styles.metricsContainer}>
-              <MetricBar 
-                label="Politeness" 
-                value={team.burnout_mean?.politeness || 0} 
-                color="#4CAF50" 
-              />
-              <MetricBar 
-                label="Sarcasm" 
-                value={team.burnout_mean?.sarcasm || 0} 
-                color="#FF9800" 
-              />
-              <MetricBar 
-                label="Toxicity" 
-                value={team.burnout_mean?.toxicity || 0} 
-                color="#F44336" 
-              />
-            </div>
-
-            <div style={styles.channelsSection}>
-                <h3 style={styles.channelsTitle}>Active Channels</h3>
-                <div style={styles.channelsList}>
-                    {team.channel_details && team.channel_details.length > 0 ? (
-                        team.channel_details.map((channel) => (
-                            <div key={channel._id} style={styles.channelBox}>
-                                <div style={styles.channelNameRow}>
-                                    <strong># {channel.name}</strong>
-                                </div>
-                                <MetricBar 
-                                    label="Politeness" 
-                                    value={channel.burnout_mean?.politeness || 0} 
-                                    color="#4CAF50" 
-                                    isSmall
-                                />
-                                <MetricBar 
-                                    label="Sarcasm" 
-                                    value={channel.burnout_mean?.sarcasm || 0} 
-                                    color="#FF9800" 
-                                    isSmall
-                                />
-                                <MetricBar 
-                                    label="Toxicity" 
-                                    value={channel.burnout_mean?.toxicity || 0} 
-                                    color="#F44336" 
-                                    isSmall
-                                />
-                            </div>
-                        ))
-                    ) : (
-                        <span style={styles.noChannels}>No channels linked</span>
-                    )}
+      {teams.length === 0 ? (
+        <div style={styles.emptyState}>
+            <h3>No Data Available</h3>
+            <p>User <strong>{CURRENT_USER_EMAIL}</strong> does not manage any teams or has no permissions.</p>
+        </div>
+      ) : (
+        <div style={styles.grid}>
+            {teams.map((team) => (
+            <div key={team._id} style={styles.card}>
+                <h2 style={styles.teamName}>{team._id}</h2>
+                
+                <div style={styles.metricsContainer}>
+                <MetricBar 
+                    label="Politeness" 
+                    value={team.burnout_mean?.politeness || 0} 
+                    color="#4CAF50" 
+                />
+                <MetricBar 
+                    label="Sarcasm" 
+                    value={team.burnout_mean?.sarcasm || 0} 
+                    color="#FF9800" 
+                />
+                <MetricBar 
+                    label="Toxicity" 
+                    value={team.burnout_mean?.toxicity || 0} 
+                    color="#F44336" 
+                />
                 </div>
-            </div>
 
-          </div>
-        ))}
-      </div>
+                <div style={styles.channelsSection}>
+                    <h3 style={styles.channelsTitle}>Active Channels</h3>
+                    <div style={styles.channelsList}>
+                        {team.channel_details && team.channel_details.length > 0 ? (
+                            team.channel_details.map((channel) => (
+                                <div key={channel._id} style={styles.channelBox}>
+                                    <div style={styles.channelNameRow}>
+                                        <strong># {channel.name}</strong>
+                                    </div>
+                                    <MetricBar 
+                                        label="Politeness" 
+                                        value={channel.burnout_mean?.politeness || 0} 
+                                        color="#4CAF50" 
+                                        isSmall
+                                    />
+                                    <MetricBar 
+                                        label="Sarcasm" 
+                                        value={channel.burnout_mean?.sarcasm || 0} 
+                                        color="#FF9800" 
+                                        isSmall
+                                    />
+                                    <MetricBar 
+                                        label="Toxicity" 
+                                        value={channel.burnout_mean?.toxicity || 0} 
+                                        color="#F44336" 
+                                        isSmall
+                                    />
+                                </div>
+                            ))
+                        ) : (
+                            <span style={styles.noChannels}>No channels linked</span>
+                        )}
+                    </div>
+                </div>
+
+            </div>
+            ))}
+        </div>
+      )}
     </div>
   );
 }
 
 const MetricBar = ({ label, value, color, isSmall }) => {
-  const percentage = Math.min((value / 5) * 100, 100);
+  const percentage = Math.min((value / 10) * 100, 100);
   
   const height = isSmall ? '6px' : '10px';
   const fontSize = isSmall ? '0.75rem' : '0.9rem';
@@ -184,7 +204,6 @@ const styles = {
     borderRadius: '5px',
     transition: 'width 0.5s ease-in-out',
   },
-  
   channelsSection: {
     borderTop: '1px solid #eee',
     paddingTop: '15px',
@@ -217,6 +236,16 @@ const styles = {
     fontStyle: 'italic',
     color: '#aaa',
     fontSize: '0.9rem',
+  },
+  emptyState: {
+    textAlign: 'center',
+    padding: '60px',
+    backgroundColor: 'white',
+    borderRadius: '15px',
+    boxShadow: '0 4px 15px rgba(0,0,0,0.05)',
+    maxWidth: '800px',
+    margin: '0 auto',
+    color: '#555'
   }
 };
 

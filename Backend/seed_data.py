@@ -25,7 +25,7 @@ def seed_database():
     default_password = generate_password_hash("password123")
 
     users = [
-        {"_id": "alonso@ww5dl.onmicrosoft.com", "name": "Alonso Carrera", "role": "admin", "teams": ["Oviedo", "La Bañeza", "León"], "password": default_password},
+        {"_id": "alonso@ww5dl.onmicrosoft.com", "name": "Alonso Carrera", "role": "employee", "teams": ["Oviedo", "La Bañeza", "León"], "password": default_password},
         {"_id": "admin@ww5dl.onmicrosoft.com", "name": "Guillermo Menguez", "role": "admin", "teams": ["Oviedo", "La Bañeza", "León"], "password": default_password},
         {"_id": "AdeleV@ww5dl.onmicrosoft.com", "name": "Adele Vance", "role": "employee", "teams": ["Oviedo", "La Bañeza"], "password": default_password},
         {"_id": "LidiaH@ww5dl.onmicrosoft.com", "name": "Lidia Holloway", "role": "employee", "teams": ["La Bañeza", "León"], "password": default_password},
@@ -75,7 +75,7 @@ def seed_database():
         {
             "_id": "León",
             "name": "León", 
-            "manager": "alonso@ww5dl.onmicrosoft.com",
+            "manager": "admin@ww5dl.onmicrosoft.com",
             "members": ["alonso@ww5dl.onmicrosoft.com", "admin@ww5dl.onmicrosoft.com", "LidiaH@ww5dl.onmicrosoft.com", "PattiF@ww5dl.onmicrosoft.com", "IsaiahL@ww5dl.onmicrosoft.com"],
             "channels": [
                 "19:qWJHf8j1OmMmc2OvIR2bfHF5Il5ZRNoo6Ou0JvhSzao1@thread.tacv2",
