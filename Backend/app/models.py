@@ -1,7 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
-
 class User(BaseModel):
     username: str = Field(alias="_id")
     name: str   
@@ -14,6 +13,10 @@ class BertScores(BaseModel):
     politeness: float
     sarcasm: float
     toxicity: float
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
 
 class Channel(BaseModel):
     id: str = Field(alias="_id")

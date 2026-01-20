@@ -5,7 +5,7 @@ from app.database import db
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
-
+# Security dependency that validates the JWT token from the request and injects the authenticated user's data from MongoDB into the protected route.
 def get_current_user(token: str = Depends(oauth2_scheme)):
     payload = decode_token(token)
     if payload is None:
@@ -18,6 +18,5 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
 
     user["username"] = user["_id"]
     return user
-from fastapi import HTTPException
-from app.database import db
+
 

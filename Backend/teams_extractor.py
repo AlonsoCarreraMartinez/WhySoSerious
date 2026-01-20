@@ -30,6 +30,7 @@ AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}"
 new_messages_count = 0
 skipped_messages_count = 0
 
+# Authenticates against Azure AD using MSAL to retrieve an OAuth2 access token for Graph API.
 def get_access_token():
     if "HEADLESS_TOKEN" in os.environ:
         return os.environ["HEADLESS_TOKEN"]
@@ -57,13 +58,15 @@ def get_access_token():
         print(f"Error: {result.get('error_description')}")
         sys.exit(1)
 
+# Normalize raw HTML content from Microsoft Graph into plain text for the AI model.
 def clean_html(raw_html):
     if not raw_html: return ""
     clean = re.sub('<[^<]+?>', '', raw_html)
     return clean.strip()
 
+# Save messages and avoid duplicates.
 def save_message(collection, msg_data, team_info, channel_info):
-    """Helper function to save a message or reply to MongoDB"""
+    
     global new_messages_count, skipped_messages_count
 
     body_content = msg_data.get('body', {}).get('content')
@@ -95,6 +98,7 @@ def save_message(collection, msg_data, team_info, channel_info):
     print(f"      Saved: {text_clean[:30]}...")
     new_messages_count += 1
 
+# Connects to Mongo, authenticates, and recursively extracts team data.
 def main():
     if not MONGO_URI:
         print("Error: MONGO_URI missing in .env")

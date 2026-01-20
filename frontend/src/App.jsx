@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 
-const CURRENT_USER_EMAIL = "admin@ww5dl.onmicrosoft.com"; // TEST
+const CURRENT_USER_EMAIL = "alonso@ww5dl.onmicrosoft.com"; // TEST
 // employee = "AdeleV@ww5dl.onmicrosoft.com"; 
 // manager = alonso@ww5dl.onmicrosoft.com
 // admin = admin@ww5dl.onmicrosoft.com

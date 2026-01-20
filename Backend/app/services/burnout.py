@@ -1,92 +1,51 @@
-from fastapi import APIRouter, HTTPException
-from datetime import datetime, timedelta
 from app.database import db
+from typing import List, Dict
 
-# Define the router
-router = APIRouter(prefix="/burnout", tags=["Burnout"])
-
-# Converts strings like '1w', '3d', '1m' into a timedelta.
-def parse_period(period: str):
-    num = int(period[:-1])
-    unit = period[-1]
-
-    if unit == "d":
-        return timedelta(days=num)
-    if unit == "w":
-        return timedelta(weeks=num)
-    if unit == "m":
-        return timedelta(days=30*num)  # approx monthly
-
-    raise ValueError("Invalid period format. Use '1w', '3d', '1m', etc.")
-
-# Receives a list of scores objects: [{politeness, sarcasm, toxicity}] and computes average burnout indicators.
-def compute_burnout(scores_list: list):
-    
+# Computes burnout_mean for sentiment scores to normalize data for the frontend.
+def calculate_average(scores_list: List[dict]) -> Dict:
     if not scores_list:
-        return {"politeness": 0, "sarcasm": 0, "toxicity": 0}
-
-    avg = {
-        "politeness": sum(s["politeness"] for s in scores_list) / len(scores_list),
-        "sarcasm": sum(s["sarcasm"] for s in scores_list) / len(scores_list),
-        "toxicity": sum(s["toxicity"] for s in scores_list) / len(scores_list)
+        return {"politeness": 0.0, "sarcasm": 0.0, "toxicity": 0.0, "message_count": 0}
+    
+    total = len(scores_list)
+    return {
+        "politeness": round(sum(s["politeness"] for s in scores_list) / total, 2),
+        "sarcasm": round(sum(s["sarcasm"] for s in scores_list) / total, 2),
+        "toxicity": round(sum(s["toxicity"] for s in scores_list) / total, 2),
+        "message_count": total
     }
 
-    return avg
-
-
-def get_user_burnout(username: str, period: str):
-    delta = parse_period(period)
-    now = datetime.utcnow()
-    cutoff = now - delta
-
-    blocks = db.message_blocks.find({
-        "start_time": {"$gte": cutoff},
-        "participants": username
+# Queries raw messages from MongoDB, groups them by channel, and aggregates the statistical burnout metrics for the specific team.
+def get_burnout_metrics(team_name: str):
+    
+    cursor = db.messages.find({
+        "teamName": team_name,
+        "analyzed": True
     })
 
-    scores_list = []
+    team_scores = []      
+    channels_data = {}    
 
-    for block in blocks:
-        for msg in block["messages"]:
-            if msg["user"] == username:
-                scores_list.append(msg["scores"])
+    for msg in cursor:
+        if msg.get("scores"):
+            score = msg["scores"]
+            
+            channel_name = msg.get("channelName", "Unknown")
 
-    return compute_burnout(scores_list)
+            team_scores.append(score)
 
+            if channel_name not in channels_data:
+                channels_data[channel_name] = []
+            channels_data[channel_name].append(score)
 
-def get_team_burnout(team_name: str, period: str):
-    team = db.teams.find_one({"_id": team_name})
-    if not team:
-        return None
+    channels_breakdown = []
+    for c_name, c_scores in channels_data.items():
+        channels_breakdown.append({
+            "channel": c_name,
+            "stats": calculate_average(c_scores)
+        })
 
-    delta = parse_period(period)
-    now = datetime.utcnow()
-    cutoff = now - delta
-
-    blocks = db.message_blocks.find({
-        "start_time": {"$gte": cutoff},
-        "participants": {"$in": team["members"]}
-    })
-
-    scores_list = []
-
-    for block in blocks:
-        if "aggregated_scores" in block:
-            scores_list.append(block["aggregated_scores"])
-
-    return compute_burnout(scores_list)
-
-# Public endpoint for the Team Dashboard
-@router.get("/team")
-def burnout_by_team(team: str, period: str):
-    
-    result = get_team_burnout(team, period)
-    
-    if result is None:
-        raise HTTPException(status_code=404, detail="Team not found")
-        
-    return {"team": team, "period": period, "burnout": result}
-
-@router.get("/user")
-def burnout_by_user(user: str, period: str):
-    return {"message": "Use the /team endpoint for the team dashboard"}
+    return {
+        "team": team_name,
+        "global_burnout": calculate_average(team_scores),
+        "channels": channels_breakdown
+    }

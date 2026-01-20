@@ -11,7 +11,7 @@ import msal
 import ctypes
 from dotenv import load_dotenv
 
-PIPELINE_INTERVAL_SECONDS = 60 
+PIPELINE_INTERVAL_SECONDS = 3600
 OPEN_BROWSER = True             
 
 class WhySoSeriousLauncher:

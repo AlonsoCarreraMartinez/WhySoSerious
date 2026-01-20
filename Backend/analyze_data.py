@@ -13,6 +13,7 @@ MONGO_URI = os.getenv("MONGO_URI")
 DB_NAME = "whysoserious_db"
 COLLECTION_NAME = "messages"
 
+# Fetches unanalyzed messages from MongoDB and analyze them with bert_inference.
 def analyze_message_batch():
     if not MONGO_URI:
         print("ERROR: Missing MONGO_URI in .env")

@@ -1,33 +1,10 @@
-from fastapi import APIRouter, Header
+from fastapi import APIRouter, Header, Depends, HTTPException
 from app.database import db
-from app.models import Team
-from fastapi import Depends, HTTPException
 from app.dependencies import get_current_user
 
 router = APIRouter(prefix="/teams", tags=["Teams"])
 
-
-# Create a new team in the database.
-@router.post("/create")
-def create_team(team: Team, current_user = Depends(get_current_user)):
-   
-    if current_user["role"] not in ["admin", "manager"]:
-        raise HTTPException(status_code=403, detail="Not allowed to create teams")
-
-    if db.teams.find_one({"_id": team.name}):
-        raise HTTPException(status_code=400, detail="Team already exists")
-
-    db.teams.insert_one({
-        "_id": team.name, 
-        "name": team.name, 
-        "manager": team.manager,
-        "members": team.members,
-        "channels": team.channels,
-        "burnout_mean": team.burnout_mean.model_dump() if team.burnout_mean else None
-    })
-    return {"message": "Team created", "team": team.name}
-
-
+# Fetches detailed metadata for a specific team, restricted to authorized managers or admins.
 @router.get("/team-info")
 def get_team_info(team: str, current_user = Depends(get_current_user)):
    
@@ -40,7 +17,7 @@ def get_team_info(team: str, current_user = Depends(get_current_user)):
 
     return {"message": f"Team data for {team}", "data": team_data}
 
-
+# Aggregates team and channel data to populate the main Dashboard charts, filtering visibility based on the user's role.
 @router.get("/dashboard")
 def get_dashboard_data(x_user_email: str = Header(None, alias="X-User-Email")):
     if not x_user_email:

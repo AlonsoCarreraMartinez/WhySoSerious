@@ -1,11 +1,13 @@
 import os
 from pymongo import MongoClient
 from dotenv import load_dotenv
+# Replace manual mean calculation with app.services.burnout import.
 
 load_dotenv()
 MONGO_URI = os.getenv("MONGO_URI")
 DB_NAME = "whysoserious_db"
 
+# Calculate and update burnout mean of teams and channels
 def calculate_and_update_metrics():
     if not MONGO_URI:
         print("ERROR: MONGO_URI not found")
