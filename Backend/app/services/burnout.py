@@ -1,7 +1,7 @@
 from app.database import db
 from typing import List, Dict
 
-# Computes burnout_mean for sentiment scores to normalize data for the frontend.
+# Computes burnout_mean to normalize data for the frontend.
 def calculate_average(scores_list: List[dict]) -> Dict:
     if not scores_list:
         return {"politeness": 0.0, "sarcasm": 0.0, "toxicity": 0.0, "message_count": 0}
@@ -14,7 +14,41 @@ def calculate_average(scores_list: List[dict]) -> Dict:
         "message_count": total
     }
 
-# Queries raw messages from MongoDB, groups them by channel, and aggregates the statistical burnout metrics for the specific team.
+# Performs MongoDB aggregation to compute weighted burnout stats for a team or channel entity.
+def calculate_burnout_stats(db_connection, entity_id, entity_type="team"):
+    match_filter = {
+        "analyzed": True,
+        "scores": {"$exists": True}
+    }
+
+    if entity_type == "team":
+        match_filter["teamId"] = entity_id
+    else:
+        match_filter["channelId"] = entity_id
+
+    pipeline = [
+        {"$match": match_filter},
+        {"$group": {
+            "_id": None,
+            "avg_politeness": {"$avg": "$scores.politeness"},
+            "avg_sarcasm": {"$avg": "$scores.sarcasm"},
+            "avg_toxicity": {"$avg": "$scores.toxicity"}
+        }}
+    ]
+
+    results = list(db_connection.messages.aggregate(pipeline))
+
+    if results:
+        data = results[0]
+        return {
+            "politeness": round(data.get("avg_politeness", 0), 4),
+            "sarcasm": round(data.get("avg_sarcasm", 0), 4),
+            "toxicity": round(data.get("avg_toxicity", 0), 4)
+        }
+    else:
+        return {"politeness": 0.0, "sarcasm": 0.0, "toxicity": 0.0}
+
+# Aggregates the burnout metrics for the specific team.
 def get_burnout_metrics(team_name: str):
     
     cursor = db.messages.find({

@@ -36,10 +36,10 @@ def seed_database():
     print(f"{len(users)} Users created.")
 
     channels = [
-        {"_id": "19:05601fabb9c24d0d8b886a81930db632@thread.tacv2", "name": "General", "team_name": "Oviedo", "burnout_mean": None},
-        {"_id": "19:fkU-S486HJhltOLqMvIPEjG5ysazsLRRJkTVaUSWR3Q1@thread.tacv2", "name": "Backlogs", "team_name": "Oviedo", "burnout_mean": None},
+        {"_id": "19:V9L6UbA2VFe687KF-be3mDmUGRFO-xrynXuxweCYBdU1@thread.tacv2", "name": "General", "team_name": "Oviedo", "burnout_mean": None},
+        {"_id": "19:05601fabb9c24d0d8b886a81930db632@thread.tacv2", "name": "Backlogs", "team_name": "Oviedo", "burnout_mean": None},
         
-        {"_id": "19:V9L6UbA2VFe687KF-be3mDmUGRFO-xrynXuxweCYBdU1@thread.tacv2", "name": "General", "team_name": "La Bañeza", "burnout_mean": None},
+        {"_id": "19:fkU-S486HJhltOLqMvIPEjG5ysazsLRRJkTVaUSWR3Q1@thread.tacv2", "name": "General", "team_name": "La Bañeza", "burnout_mean": None},
         {"_id": "19:afa71eb9c66f4b60a30c705e393508fb@thread.tacv2", "name": "Backlogs", "team_name": "La Bañeza", "burnout_mean": None},
         
         {"_id": "19:qWJHf8j1OmMmc2OvIR2bfHF5Il5ZRNoo6Ou0JvhSzao1@thread.tacv2", "name": "General", "team_name": "León", "burnout_mean": None},
@@ -56,8 +56,8 @@ def seed_database():
             "manager": "alonso@ww5dl.onmicrosoft.com",
             "members": ["alonso@ww5dl.onmicrosoft.com", "admin@ww5dl.onmicrosoft.com", "AdeleV@ww5dl.onmicrosoft.com"],
             "channels": [
-                "19:05601fabb9c24d0d8b886a81930db632@thread.tacv2",
-                "19:fkU-S486HJhltOLqMvIPEjG5ysazsLRRJkTVaUSWR3Q1@thread.tacv2"
+                "19:V9L6UbA2VFe687KF-be3mDmUGRFO-xrynXuxweCYBdU1@thread.tacv2",
+                "19:05601fabb9c24d0d8b886a81930db632@thread.tacv2"
             ],
             "burnout_mean": None
         },
@@ -67,7 +67,7 @@ def seed_database():
             "manager": "alonso@ww5dl.onmicrosoft.com",
             "members": ["alonso@ww5dl.onmicrosoft.com", "admin@ww5dl.onmicrosoft.com", "LidiaH@ww5dl.onmicrosoft.com", "IsaiahL@ww5dl.onmicrosoft.com", "AdeleV@ww5dl.onmicrosoft.com"],
             "channels": [
-                "19:V9L6UbA2VFe687KF-be3mDmUGRFO-xrynXuxweCYBdU1@thread.tacv2",
+                "19:fkU-S486HJhltOLqMvIPEjG5ysazsLRRJkTVaUSWR3Q1@thread.tacv2",
                 "19:afa71eb9c66f4b60a30c705e393508fb@thread.tacv2"
             ],
             "burnout_mean": None

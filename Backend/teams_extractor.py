@@ -17,7 +17,7 @@ if os.path.exists(env_path_backend):
 elif os.path.exists(env_path_root):
     load_dotenv(env_path_root)
 else:
-    print("Error: .env file not found in Backend or Root directory.")
+    print("Error: .env file not found.")
     sys.exit(1)
 
 CLIENT_ID = os.getenv("AZURE_CLIENT_ID") or os.getenv("CLIENT_ID")
@@ -30,13 +30,14 @@ AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}"
 new_messages_count = 0
 skipped_messages_count = 0
 
-# Authenticates against Azure AD using MSAL to retrieve an OAuth2 access token for Graph API.
+# Authenticates against Azure AD using MSAL to retrieve an OAuth2 access token.
 def get_access_token():
     if "HEADLESS_TOKEN" in os.environ:
         return os.environ["HEADLESS_TOKEN"]
 
     app = msal.PublicClientApplication(CLIENT_ID, authority=AUTHORITY)
     accounts = app.get_accounts()
+    
     if accounts:
         result = app.acquire_token_silent(SCOPES, account=accounts[0])
         if result: return result['access_token']
@@ -46,7 +47,6 @@ def get_access_token():
         result = app.acquire_token_interactive(scopes=SCOPES)
     except Exception as e:
         print(f"Interactive login failed: {e}")
-        print("Falling back to Device Code Flow...")
         flow = app.initiate_device_flow(scopes=SCOPES)
         print(f"Go to: {flow['verification_uri']}")
         print(f"Code: {flow['user_code']}")
@@ -58,15 +58,24 @@ def get_access_token():
         print(f"Error: {result.get('error_description')}")
         sys.exit(1)
 
-# Normalize raw HTML content from Microsoft Graph into plain text for the AI model.
+# Cleans HTML tags from the message content.
 def clean_html(raw_html):
     if not raw_html: return ""
     clean = re.sub('<[^<]+?>', '', raw_html)
     return clean.strip()
 
-# Save messages and avoid duplicates.
+# Gets the timestamp of the last message stored in the database for a channel.
+def get_last_sync_timestamp(collection, channel_id):
+    last_msg = collection.find_one(
+        {"channelId": channel_id},
+        sort=[("timestamp", -1)]
+    )
+    if last_msg:
+        return last_msg["timestamp"]
+    return None
+
+# Saves a message to MongoDB, checking for duplicates by external ID.
 def save_message(collection, msg_data, team_info, channel_info):
-    
     global new_messages_count, skipped_messages_count
 
     body_content = msg_data.get('body', {}).get('content')
@@ -77,8 +86,7 @@ def save_message(collection, msg_data, team_info, channel_info):
 
     sender_name = msg_data.get('from', {}).get('user', {}).get('displayName', 'Unknown')
     
-    existing_msg = collection.find_one({"externalId": msg_data['id']})
-    if existing_msg:
+    if collection.find_one({"externalId": msg_data['id']}):
         skipped_messages_count += 1
         return
 
@@ -86,7 +94,7 @@ def save_message(collection, msg_data, team_info, channel_info):
         "externalId": msg_data['id'],
         "content": text_clean,
         "sender": sender_name,
-        "timestamp": msg_data['createdDateTime'],
+        "timestamp": msg_data['createdDateTime'], 
         "teamId": team_info['id'],
         "teamName": team_info['name'],
         "channelId": channel_info['id'],
@@ -95,10 +103,10 @@ def save_message(collection, msg_data, team_info, channel_info):
     }
 
     collection.insert_one(msg_doc)
-    print(f"      Saved: {text_clean[:30]}...")
+    print(f"      [NEW] Saved: {text_clean[:30]}...")
     new_messages_count += 1
 
-# Connects to Mongo, authenticates, and recursively extracts team data.
+# MAIN.
 def main():
     if not MONGO_URI:
         print("Error: MONGO_URI missing in .env")
@@ -111,50 +119,78 @@ def main():
     token = get_access_token()
     headers = {'Authorization': f'Bearer {token}'}
 
-    print("\nStarting extraction (Including Replies)...")
+    print("\nStarting extraction (Optimized Deep Check Strategy)...")
 
-    url_teams = "https://graph.microsoft.com/v1.0/me/joinedTeams"
-    resp_teams = requests.get(url_teams, headers=headers)
-    if resp_teams.status_code != 200: return
-    teams = resp_teams.json().get('value', [])
+    try:
+        resp_teams = requests.get("https://graph.microsoft.com/v1.0/me/joinedTeams", headers=headers, timeout=10)
+        teams = resp_teams.json().get('value', [])
+    except Exception as e:
+        print(f"Error getting teams: {e}")
+        return
+
     print(f"Found {len(teams)} teams.")
 
     for team in teams:
         team_info = {'id': team['id'], 'name': team['displayName']}
         print(f"\nProcessing Team: {team_info['name']}")
 
-        url_channels = f"https://graph.microsoft.com/v1.0/teams/{team['id']}/channels"
-        resp_channels = requests.get(url_channels, headers=headers)
-        if resp_channels.status_code != 200: continue
-        channels = resp_channels.json().get('value', [])
+        try:
+            url_channels = f"https://graph.microsoft.com/v1.0/teams/{team['id']}/channels"
+            resp_channels = requests.get(url_channels, headers=headers, timeout=10)
+            channels = resp_channels.json().get('value', [])
+        except:
+            continue
 
         for channel in channels:
             channel_info = {'id': channel['id'], 'name': channel['displayName']}
             print(f"   Channel: {channel_info['name']}")
 
-            url_messages = f"https://graph.microsoft.com/v1.0/teams/{team['id']}/channels/{channel['id']}/messages"
-            resp_msgs = requests.get(url_messages, headers=headers)
-            if resp_msgs.status_code != 200: continue
-            messages = resp_msgs.json().get('value', [])
+            last_db_date = get_last_sync_timestamp(collection, channel['id'])
+            if last_db_date:
+                print(f"      -> Last sync: {last_db_date}. checking updates...")
+            else:
+                print(f"      -> Initial Load: Fetching history...")
 
-            for msg in messages:
-                
-                save_message(collection, msg, team_info, channel_info)
+            next_link = f"https://graph.microsoft.com/v1.0/teams/{team['id']}/channels/{channel['id']}/messages?$top=20&$expand=replies"
+            
+            try:
+    
+                while next_link:
+                    resp_msgs = requests.get(next_link, headers=headers, timeout=15) 
+                    
+                    if resp_msgs.status_code != 200: 
+                        print(f"      Error fetching messages: {resp_msgs.status_code}")
+                        break
+                    
+                    data = resp_msgs.json()
+                    messages = data.get('value', [])
+                    if not messages: break
 
-                url_replies = f"https://graph.microsoft.com/v1.0/teams/{team['id']}/channels/{channel['id']}/messages/{msg['id']}/replies"
-                resp_replies = requests.get(url_replies, headers=headers)
-                
-                if resp_replies.status_code == 200:
-                    replies = resp_replies.json().get('value', [])
-                    if replies:
+                    for msg in messages:
+                        msg_date = msg['createdDateTime']
+
+                        if not last_db_date or msg_date > last_db_date:
+                            save_message(collection, msg, team_info, channel_info)
                         
-                        for reply in replies:
-                            save_message(collection, reply, team_info, channel_info)
+                        replies = msg.get('replies', [])
+                        if replies:
+                            
+                            for reply in replies:
+                                if last_db_date and reply['createdDateTime'] <= last_db_date:
+                                    continue
+                                save_message(collection, reply, team_info, channel_info)
+
+                    break 
+
+            except requests.exceptions.Timeout:
+                print("      Warning: Connection timed out for this channel. Skipping...")
+            except Exception as e:
+                print(f"      Error: {e}")
 
     print("\n" + "="*50)
     print(f"SUMMARY")
     print(f"   - New messages saved: {new_messages_count}")
-    print(f"   - Existing messages skipped: {skipped_messages_count}")
+    print(f"   - Existing messages checked: {skipped_messages_count}")
     print("="*50)
 
 if __name__ == "__main__":

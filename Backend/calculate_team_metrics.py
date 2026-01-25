@@ -1,13 +1,16 @@
 import os
+import sys
 from pymongo import MongoClient
 from dotenv import load_dotenv
-# Replace manual mean calculation with app.services.burnout import.
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(current_dir)
 
 load_dotenv()
 MONGO_URI = os.getenv("MONGO_URI")
 DB_NAME = "whysoserious_db"
 
-# Calculate and update burnout mean of teams and channels
+# Calculate and update burnout mean of teams and channels.
 def calculate_and_update_metrics():
     if not MONGO_URI:
         print("ERROR: MONGO_URI not found")
@@ -20,7 +23,8 @@ def calculate_and_update_metrics():
     channels_collection = db["channels"]
     messages_collection = db["messages"]
 
-    print("--- Updating TEAMS ---")
+    print("--- Updating TEAMS (By Name) ---")
+    
     team_pipeline = [
         {
             "$match": {
@@ -31,7 +35,7 @@ def calculate_and_update_metrics():
         },
         {
             "$group": {
-                "_id": "$teamName",
+                "_id": "$teamName",  
                 "avg_politeness": {"$avg": "$scores.politeness"},
                 "avg_sarcasm": {"$avg": "$scores.sarcasm"},
                 "avg_toxicity": {"$avg": "$scores.toxicity"}
@@ -40,39 +44,33 @@ def calculate_and_update_metrics():
     ]
 
     team_results = list(messages_collection.aggregate(team_pipeline))
-    teams_with_data = set()
+    teams_updated_count = 0
 
     for result in team_results:
         team_name = result["_id"]
-        if not team_name:
-            continue
-
-        teams_with_data.add(team_name)
+        if not team_name: continue
 
         burnout_mean = {
-            "politeness": round(result["avg_politeness"], 4),
-            "sarcasm": round(result["avg_sarcasm"], 4),
-            "toxicity": round(result["avg_toxicity"], 4)
+            "politeness": round(result["avg_politeness"], 2),
+            "sarcasm": round(result["avg_sarcasm"], 2),
+            "toxicity": round(result["avg_toxicity"], 2)
         }
 
-        teams_collection.update_one(
-            {"_id": team_name},
+        update_result = teams_collection.update_one(
+            {"_id": team_name}, 
             {"$set": {"burnout_mean": burnout_mean}}
         )
         
-        print(f"Team: {team_name} updated with {burnout_mean}")
+        if update_result.matched_count > 0:
+            print(f"Team: {team_name} -> Updated metrics: {burnout_mean}")
+            teams_updated_count += 1
+        else:
+            print(f"WARNING: Metrics calculated for Team '{team_name}', but not found in 'teams' collection.")
 
-    all_teams = teams_collection.find({}, {"_id": 1})
-    for team in all_teams:
-        if team["_id"] not in teams_with_data:
-            empty_scores = {"politeness": 0.0, "sarcasm": 0.0, "toxicity": 0.0}
-            teams_collection.update_one(
-                {"_id": team["_id"]},
-                {"$set": {"burnout_mean": empty_scores}}
-            )
-            print(f"Team: {team['_id']} set to default 0.0 values")
+    print(f"Total Teams updated: {teams_updated_count}")
 
-    print("\n--- Updating CHANNELS ---")
+    print("\n--- Updating CHANNELS (By ID) ---")
+    
     channel_pipeline = [
         {
             "$match": {
@@ -83,7 +81,7 @@ def calculate_and_update_metrics():
         },
         {
             "$group": {
-                "_id": "$channelId",
+                "_id": "$channelId", 
                 "avg_politeness": {"$avg": "$scores.politeness"},
                 "avg_sarcasm": {"$avg": "$scores.sarcasm"},
                 "avg_toxicity": {"$avg": "$scores.toxicity"}
@@ -92,19 +90,16 @@ def calculate_and_update_metrics():
     ]
 
     channel_results = list(messages_collection.aggregate(channel_pipeline))
-    channels_with_data = set()
-
+    
     for result in channel_results:
         channel_id = result["_id"]
-        if not channel_id:
-            continue
+        if not channel_id: continue
 
-        channels_with_data.add(channel_id)
-
+        
         burnout_mean = {
-            "politeness": round(result["avg_politeness"], 4),
-            "sarcasm": round(result["avg_sarcasm"], 4),
-            "toxicity": round(result["avg_toxicity"], 4)
+            "politeness": round(result["avg_politeness"], 2),
+            "sarcasm": round(result["avg_sarcasm"], 2),
+            "toxicity": round(result["avg_toxicity"], 2)
         }
 
         channels_collection.update_one(
@@ -112,17 +107,8 @@ def calculate_and_update_metrics():
             {"$set": {"burnout_mean": burnout_mean}}
         )
         
-        print(f"Channel: {channel_id} updated with metrics")
-
-    all_channels = channels_collection.find({}, {"_id": 1})
-    for channel in all_channels:
-        if channel["_id"] not in channels_with_data:
-            empty_scores = {"politeness": 0.0, "sarcasm": 0.0, "toxicity": 0.0}
-            channels_collection.update_one(
-                {"_id": channel["_id"]},
-                {"$set": {"burnout_mean": empty_scores}}
-            )
-            print(f"Channel: {channel['_id']} set to default 0.0 values")
+    
+        print(f"Channel ID: {channel_id[:20]}... updated with {burnout_mean}")
 
     print("\nFinished updating all statistics.")
 
