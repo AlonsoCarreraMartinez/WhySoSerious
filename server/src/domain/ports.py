@@ -49,4 +49,19 @@ class MessageRepository(ABC):
     def update_scores(self, message_id: str, scores: BertScores): # Save BERT scores and mark as analyzed.
         pass
 
+# Port for external Microsoft Graph API communication (application/services/sync_service)
+class TeamsProvider(ABC):
+
+    @abstractmethod
+    def get_all_teams(self) -> List[dict]: # Fetch all teams from Microsoft Graph.
+        pass
+
+    @abstractmethod
+    def get_channels(self, team_id: str) -> List[dict]: # Fetch channels for a specific team.
+        pass
+
+    @abstractmethod
+    def get_new_messages(self, team_id: str, channel_id: str, last_sync: Optional[str]) -> List[Message]: #Fetch new messages since the last synchronization date.
+        pass
+
     
