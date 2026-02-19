@@ -49,6 +49,9 @@ class MessageRepository(ABC):
     def update_scores(self, message_id: str, scores: BertScores): # Save BERT scores and mark as analyzed.
         pass
 
+    def get_last_sync_timestamp(self, channel_id: str) -> Optional[str]: # Returns the timestamp of the last message saved for a specific channel.
+        pass
+
 # Port for external Microsoft Graph API communication (application/services/sync_service)
 class TeamsProvider(ABC):
 

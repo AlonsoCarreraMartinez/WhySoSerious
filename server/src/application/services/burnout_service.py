@@ -5,7 +5,7 @@ from src.infrastructure.ml.bert_inference import BertPredictor
 
 class BurnoutService:
 
-    # Inject repository interfaces through the constructor
+    # Inject repository interfaces through the constructor.
     def __init__(
         self, 
         message_repo: MessageRepository, 
@@ -13,14 +13,14 @@ class BurnoutService:
         channel_repo: ChannelRepository
     ):
         
-        # Store repositories and initialize the AI model
+        # Store repositories and initialize the AI model.
         self.message_repo = message_repo
         self.team_repo = team_repo
         self.channel_repo = channel_repo
         self.predictor = BertPredictor()
 
 
-    # Analyze new messages and update global scores
+    # Analyze new messages and update global scores.
     def analyzed_data(self):
     
         unanalyzed_messages = self.message_repo.get_unanalyzed()
@@ -50,5 +50,59 @@ class BurnoutService:
     # Update global team and channel scores
     def update_global_scores(self):
         
-        self.team_repo.update_burnout_scores_all() 
-        self.channel_repo.update_burnout_scores_all()
+        target_teams = ["León", "Oviedo", "La Bañeza"] # Filter for target teams.
+
+        for team_name in target_teams:
+           
+            query = {"teamName": team_name, "analyzed": True}
+            messages = list(self.message_repo.collection.find(query))
+            
+            if not messages:
+                continue
+
+            total = len(messages)
+            sums = {"p": 0.0, "s": 0.0, "t": 0.0}
+            
+            for m in messages:
+                sc = m["scores"]
+                sums["p"] += sc["politeness"]
+                sums["s"] += sc["sarcasm"]
+                sums["t"] += sc["toxicity"]
+
+            mean_scores = BertScores(
+                politeness=sums["p"] / total,
+                sarcasm=sums["s"] / total,
+                toxicity=sums["t"] / total
+            )
+
+            self.team_repo.update_burnout_metrics(team_name, mean_scores)
+            print(f"Metrics updated for Team: {team_name}")
+
+            channels_in_team = self.message_repo.collection.distinct("channelName", {"teamName": team_name})
+
+            for channel_name in channels_in_team:
+                
+                query_channel = {"channelName": channel_name, "teamName": team_name, "analyzed": True}
+                channel_messages = list(self.message_repo.collection.find(query_channel))
+
+                if channel_messages:
+                    
+                    channel_id = channel_messages[0]["channelId"]
+                    
+                    total_c = len(channel_messages)
+                    sums_c = {"p": 0.0, "s": 0.0, "t": 0.0}
+
+                    for m in channel_messages:
+                        sc = m["scores"]
+                        sums_c["p"] += sc["politeness"]
+                        sums_c["s"] += sc["sarcasm"]
+                        sums_c["t"] += sc["toxicity"]
+
+                    mean_chan = BertScores(
+                        politeness=sums_c["p"] / total_c,
+                        sarcasm=sums_c["s"] / total_c,
+                        toxicity=sums_c["t"] / total_c
+                    )
+                        
+                    self.channel_repo.update_burnout_metrics(channel_id, mean_chan)
+                    print(f"  > Metrics updated for Channel: '{channel_name}' (Team: {team_name})")

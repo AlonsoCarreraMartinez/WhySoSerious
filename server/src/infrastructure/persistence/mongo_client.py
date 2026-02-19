@@ -1,11 +1,17 @@
-import os
 from pymongo import MongoClient
-from dotenv import load_dotenv
+from infrastructure.config.settings import settings
 
-load_dotenv()
+class Mongo_client:
 
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+    def __init__(self):
+        
+        self.client = MongoClient(settings.MONGO_URI) # Establish connection using the URI from the .env file.
+        self.db = self.client.get_database("whysoserious_db") # Access the specific database.
 
-client = MongoClient(MONGO_URI)
+    # Returns a specific collection form the database. 
+    def get_collection(self, name: str):
 
-db = client["whysoserious_db"]  # database name
+        return self.db[name]
+    
+# Singleton instance used across the entire application.
+mongo_client = Mongo_client()

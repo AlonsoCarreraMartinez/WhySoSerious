@@ -18,17 +18,20 @@ class SyncService:
         teams = self.teams_provider.get_all_teams()
 
         for team in teams:
+
+            team_name = team.get('displayName')
             
-            if team.get('displayName') not in self.target_teams:
+            if team_name not in self.target_teams:
                 continue
             
-            print(f"\nSyncing Team: {team.get('displayName')}")
+            print(f"\nSyncing Team: {team_name}")
             
             channels = self.teams_provider.get_channels(team['id'])
 
             for channel in channels:
-
-                print(f" Processing channel: {channel.get('displayName')}")
+                
+                channel_name = channel.get('displayName')
+                print(f" Processing channel: {channel_name}")
                 
                 last_db_date = self.message_repo.get_last_sync_timestamp(channel['id'])
                 
@@ -39,6 +42,9 @@ class SyncService:
                 )
                 
                 for msg in new_messages:
+                    
+                    msg.teamName = team_name
+                    msg.channelName = channel_name
                     self.message_repo.save(msg)
 
         print("\nSynchronization completed.")
