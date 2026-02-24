@@ -1,58 +1,35 @@
 from fastapi import APIRouter, Header, Depends, HTTPException
-from app.database import db
-from app.dependencies import get_current_user
+from typing import List
+from application.services.auth_service import AuthService
+from infrastructure.api.dependencies import get_auth_service, get_team_repository
 
 router = APIRouter(prefix="/teams", tags=["Teams"])
 
-# Fetches detailed metadata for a specific team, restricted to authorized managers or admins.
-@router.get("/team-info")
-def get_team_info(team: str, current_user = Depends(get_current_user)):
-   
-    if current_user["role"] not in ["admin", "manager"]:
-        raise HTTPException(status_code=403, detail="Not allowed")
-
-    team_data = db.teams.find_one({"_id": team})
-    if not team_data:
-        raise HTTPException(status_code=404, detail="Team not found")
-
-    return {"message": f"Team data for {team}", "data": team_data}
-
-# Aggregates team and channel data to populate the main Dashboard charts, filtering visibility based on the user's role.
+# Fetches teams based on Azure permissions.
 @router.get("/dashboard")
-def get_dashboard_data(x_user_email: str = Header(None, alias="X-User-Email")):
+async def get_dashboard_data(
+    x_user_email: str = Header(None, alias="X-User-Email"),
+    auth_service: AuthService = Depends(get_auth_service),
+    team_repo = Depends(get_team_repository)
+):
+
     if not x_user_email:
-        return []
+        raise HTTPException(status_code=401, detail="X-User-Email header missing")
 
-    user = db.users.find_one({"_id": x_user_email})
+    permissions = auth_service.validate_user_access(x_user_email)
 
-    if not user:
-        return []
+    if not permissions["in_org"]:
+        raise HTTPException(status_code=403, detail="User not in organization")
 
-    match_stage = {} 
-    if user.get("role") != "admin":
-        match_stage = {"manager": x_user_email}
+    if permissions["is_admin"]:
+        return team_repo.get_all()
 
-    pipeline = [
-        { "$match": match_stage },
-        {
-            "$lookup": {
-                "from": "channels",
-                "localField": "channels",
-                "foreignField": "_id",
-                "as": "channel_details"
-            }
-        },
-        {
-            "$project": {
-                "_id": 1, 
-                "name": 1, 
-                "manager": 1, 
-                "burnout_mean": 1, 
-                "channel_details": 1 
-            }
-        }
-    ]
-    
-    teams = list(db.teams.aggregate(pipeline))
-    return teams
+    if permissions["managed_teams"]:
+        results = []
+        for team_name in permissions["managed_teams"]:
+            team_data = team_repo.get_by_id(team_name)
+            if team_data:
+                results.append(team_data)
+        return results
 
+    return [] 

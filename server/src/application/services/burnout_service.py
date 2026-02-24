@@ -29,7 +29,7 @@ class BurnoutService:
             print("No new messages.")
             return
 
-        print(f"Analyzing {len(unanalyzed_messages)} messages")
+        print(f"Analyzing {len(unanalyzed_messages)} new messages")
 
         for msg in unanalyzed_messages:
 
@@ -70,9 +70,9 @@ class BurnoutService:
                 sums["t"] += sc["toxicity"]
 
             mean_scores = BertScores(
-                politeness=sums["p"] / total,
-                sarcasm=sums["s"] / total,
-                toxicity=sums["t"] / total
+                politeness=round(sums["p"] / total, 2),
+                sarcasm=round(sums["s"] / total, 2),
+                toxicity=round(sums["t"] / total, 2)
             )
 
             self.team_repo.update_burnout_metrics(team_name, mean_scores)
@@ -99,9 +99,9 @@ class BurnoutService:
                         sums_c["t"] += sc["toxicity"]
 
                     mean_chan = BertScores(
-                        politeness=sums_c["p"] / total_c,
-                        sarcasm=sums_c["s"] / total_c,
-                        toxicity=sums_c["t"] / total_c
+                        politeness=round(sums_c["p"] / total_c, 2),
+                        sarcasm=round(sums_c["s"] / total_c, 2),
+                        toxicity=round(sums_c["t"] / total_c, 2)
                     )
                         
                     self.channel_repo.update_burnout_metrics(channel_id, mean_chan)

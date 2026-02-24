@@ -30,7 +30,13 @@ class MongoTeamRepository(TeamRepository):
     def update_burnout_metrics(self, team_id: str, scores: BertScores):
         
         self.collection.update_one(
-            {"externalId": team_id},
-            {"$set": {"last_scores": scores.__dict__}},
+            {"_id": team_id},
+            {"$set": {"burnout_mean": scores.model_dump()}},
             upsert=False 
         )
+
+    # Fetches all teams stored in the database.
+    def get_all(self) -> List[Team]:
+
+        cursor = self.collection.find({})
+        return [Team(**doc) for doc in cursor] # Convert each MongoDB document into a Team model object using unpacking (**).

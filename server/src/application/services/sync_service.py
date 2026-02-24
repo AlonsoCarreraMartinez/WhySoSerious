@@ -17,6 +17,10 @@ class SyncService:
         
         teams = self.teams_provider.get_all_teams()
 
+        if teams is None:
+            print("Error: Could not fetch teams from provider.")
+            return
+
         for team in teams:
 
             team_name = team.get('displayName')
@@ -27,6 +31,10 @@ class SyncService:
             print(f"\nSyncing Team: {team_name}")
             
             channels = self.teams_provider.get_channels(team['id'])
+
+            if channels is None:
+                print(f" Skipping team {team_name}: Could not fetch channels.")
+                continue
 
             for channel in channels:
                 
@@ -40,6 +48,10 @@ class SyncService:
                     channel_id=channel['id'], 
                     last_sync=last_db_date
                 )
+                
+                if new_messages is None:
+                    print(f"  Warning: Could not fetch messages for channel {channel_name}.")
+                    continue
                 
                 for msg in new_messages:
                     

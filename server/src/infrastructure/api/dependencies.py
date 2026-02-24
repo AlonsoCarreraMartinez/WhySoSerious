@@ -1,22 +1,18 @@
-from fastapi import Depends, HTTPException
-from fastapi.security import OAuth2PasswordBearer
-from app.auth import decode_token
-from app.database import db
+from infrastructure.external.azure.azure_teams_provider import AzureTeamsProvider
+from infrastructure.persistence.repositories.mongo_team_repository import MongoTeamRepository
+from application.services.auth_service import AuthService
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+# Singleton instances.
+azure_provider = AzureTeamsProvider()
+team_repository = MongoTeamRepository()
+auth_service = AuthService(azure_provider)
 
-# Security dependency that validates the JWT token from the request and injects the authenticated user's data from MongoDB into the protected route.
-def get_current_user(token: str = Depends(oauth2_scheme)):
-    payload = decode_token(token)
-    if payload is None:
-        raise HTTPException(status_code=401, detail="Invalid token")
+# Returns the AuthService instance to be used by routers.
+def get_auth_service() -> AuthService:
+    
+    return auth_service
 
-    username = payload["sub"]
-    user = db.users.find_one({"_id": username})
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+# Returns the TeamRepository instance to be used by routers.
+def get_team_repository() -> MongoTeamRepository:
 
-    user["username"] = user["_id"]
-    return user
-
-
+    return team_repository

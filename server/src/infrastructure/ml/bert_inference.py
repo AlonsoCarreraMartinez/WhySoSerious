@@ -1,32 +1,41 @@
 import os
 import numpy as np
-from transformers import pipeline
+from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
+from pathlib import Path
 
 class BertPredictor:
     def __init__(self):
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        app_dir = os.path.dirname(current_dir)
-        backend_dir = os.path.dirname(app_dir)
+        infra_dir = os.path.dirname(current_dir)
+        src_dir = os.path.dirname(infra_dir)
+        backend_dir = os.path.dirname(src_dir)
         
-        model_dir = os.path.join(backend_dir, "models", "hf_bert_reg")
-
-        print(f"LOADING MODELS FROM: {model_dir}")
+        weights_base = Path(backend_dir) / "weights" / "models" / "hf_bert_reg"
         
         try:
-            toxic_path = os.path.join(model_dir, "toxicity")
-            self.toxic_pipe = pipeline("text-classification", model=toxic_path, tokenizer=toxic_path, top_k=None)
+            print(f"LOADING MODELS FROM: {weights_base}")
 
-            sarcasm_path = os.path.join(model_dir, "sarcasm")
-            self.sarcasm_pipe = pipeline("text-classification", model=sarcasm_path, tokenizer=sarcasm_path, top_k=None)
-
-            politeness_path = os.path.join(model_dir, "politeness")
-            self.sentiment_pipe = pipeline("sentiment-analysis", model=politeness_path, tokenizer=politeness_path, top_k=None)
+            self.toxic_pipe = self._load_local_pipeline(weights_base / "toxicity", "text-classification")
+            self.sarcasm_pipe = self._load_local_pipeline(weights_base / "sarcasm", "text-classification")
+            self.sentiment_pipe = self._load_local_pipeline(weights_base / "politeness", "sentiment-analysis")
             
             print("MODELS LOADED SUCCESSFULLY")
             
         except Exception as e:
             print(f"CRITICAL ERROR LOADING MODELS: {e}")
             self.toxic_pipe = None
+
+    def _load_local_pipeline(self, path, task):
+        model_path = os.path.abspath(str(path))
+        model = AutoModelForSequenceClassification.from_pretrained(model_path, local_files_only=True)
+        tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
+        return pipeline(task, model=model, tokenizer=tokenizer)
+
+    def _get_results_safely(self, pipe, text):
+        raw = pipe(text, top_k=None)
+        if isinstance(raw, list) and len(raw) > 0:
+            return raw[0] if isinstance(raw[0], list) else raw
+        return []
 
     def predict(self, text):
         if not text or not self.toxic_pipe:
@@ -36,24 +45,27 @@ class BertPredictor:
             text_lower = text.lower()
             word_count = len(text.split())
 
-            toxic_results = self.toxic_pipe(text)[0]
+            toxic_results = self._get_results_safely(self.toxic_pipe, text)
             toxic_scores = []
             target_labels = ['toxicity', 'severe_toxicity', 'insult', 'threat', 'obscene', 'identity_attack']
             for res in toxic_results:
-                if res['label'] in target_labels:
-                    toxic_scores.append(res['score'])
+                if isinstance(res, dict) and res.get('label') in target_labels:
+                    toxic_scores.append(res.get('score', 0.0))
             toxic_score = max(toxic_scores) if toxic_scores else 0.0
             
-            sarcasm_results = self.sarcasm_pipe(text)[0]
+            sarcasm_results = self._get_results_safely(self.sarcasm_pipe, text)
             sarcasm_score = 0.0
             for res in sarcasm_results:
-                if res['label'] == 'irony':
-                    sarcasm_score = res['score']
+                if isinstance(res, dict) and res.get('label') == 'irony':
+                    sarcasm_score = res.get('score', 0.0)
 
-            sent_results = self.sentiment_pipe(text)[0]
-            top_sentiment = max(sent_results, key=lambda x: x['score'])
-            label = top_sentiment['label']
-            score = top_sentiment['score']
+            sent_results = self._get_results_safely(self.sentiment_pipe, text)
+            if sent_results:
+                top_sentiment = max(sent_results, key=lambda x: x.get('score', 0.0))
+                label = top_sentiment.get('label')
+                score = top_sentiment.get('score', 0.0)
+            else:
+                label, score = 'neutral', 0.0
 
             politeness_score = 5.0
             if label == 'positive':
@@ -67,9 +79,7 @@ class BertPredictor:
                 sarcasm_score *= 0.2
 
             status_keywords = ["successfully", "fixed", "resolved", "completed", "scheduled", "maintenance", "updated", "deployed"]
-            is_status_msg = any(word in text_lower for word in status_keywords)
-            
-            if is_status_msg and toxic_score < 0.3:
+            if any(word in text_lower for word in status_keywords) and toxic_score < 0.3:
                 sarcasm_score *= 0.2 
 
             condescending_phrases = ["maybe you should", "i guess i have to", "clearly you didn't", "obvious", "explain everything"]

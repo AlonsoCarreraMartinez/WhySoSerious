@@ -1,15 +1,24 @@
 from fastapi import FastAPI
-from app.routers import users, teams, auth, burnout, channels 
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-import os
+from infrastructure.api.routers import teams, burnout, channels 
+from infrastructure.external.scheduler.scheduler import TaskScheduler
+from application.services.sync_service import SyncService
+from application.services.burnout_service import BurnoutService
+from infrastructure.persistence.repositories.mongo_message_repository import MongoMessageRepository
+from infrastructure.persistence.repositories.mongo_team_repository import MongoTeamRepository
+from infrastructure.persistence.repositories.mongo_channel_repository import MongoChannelRepository
+from infrastructure.external.azure.azure_teams_provider import AzureTeamsProvider
 
 # python -m venv .venv
-# uvicorn app.main:app --reload
-# http://127.0.0.1:8000/docs
+# uvicorn src.infrastructure.api.main:app --reload
+# set PYTHONPATH=src && uvicorn infrastructure.api.main:app --reload
+# http://127.0.0.1:8000/
 
-app = FastAPI(title="WhySoSerious Backend")
 
+# Initialize the FastAPI application instance.
+app = FastAPI(title="WhySoSerious")
+
+# Configure CORS to allow requests from the React frontend.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -18,17 +27,31 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(users.router)
-app.include_router(teams.router)
-app.include_router(auth.router)
-app.include_router(burnout.router)
-app.include_router(channels.router)
+# Dependency Injection.
+message_repo = MongoMessageRepository()
+team_repo = MongoTeamRepository()
+channel_repo = MongoChannelRepository()
+azure_provider = AzureTeamsProvider()
+
+sync_service = SyncService(message_repo, azure_provider)
+burnout_service = BurnoutService(message_repo, team_repo, channel_repo)
+
+# Initialize the Background Task Scheduler to manage automated Cron Jobs.
+task_scheduler = TaskScheduler(sync_service, burnout_service)
 
 
-frontend_path = os.path.join(os.getcwd(), "..", "frontend", "dist")
+# Launch the background scheduler to start syncing and analyzing data automatically.
+@app.on_event("startup")
+async def startup_event():
 
-if os.path.exists(frontend_path):
-    app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
-    print(f" Frontend mounted from {frontend_path}")
-else:
-    print("The folder doesn't found, maybe you don't execute 'npm run build'")
+    task_scheduler.start()
+    print("Backend started and Cron Jobs scheduled")
+
+# Routers.
+app.include_router(teams.router, prefix="/api")
+app.include_router(burnout.router, prefix="/api")
+app.include_router(channels.router, prefix="/api")
+
+
+
+

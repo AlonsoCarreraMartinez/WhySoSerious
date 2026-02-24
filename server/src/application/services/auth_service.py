@@ -1,36 +1,15 @@
-from datetime import datetime, timedelta
-from jose import jwt, JWTError
-from passlib.context import CryptContext
-import os
-from dotenv import load_dotenv
+from domain.ports import TeamsProvider
 
-load_dotenv()
+class AuthService:
+    
+    # inject the interface
+    def __init__(self, teams_provider: TeamsProvider):
+        self.teams_provider = teams_provider
 
-SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkey123")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+    # Validates via Azure if the user exists in the organization
+    def validate_user_access(self, email: str) -> dict:
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
-
-
-def hash_password(password: str):
-    return pwd_context.hash(password)
-
-
-def create_access_token(data: dict):
-    to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-
-def decode_token(token: str):
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload
-    except JWTError:
-        return None
+        if not email:
+            return {"in_org": False, "is_admin": False, "managed_teams": []}
+            
+        return self.teams_provider.get_user_permissions(email) # ESTAMOS USANDO UN PLACEHOLDER.

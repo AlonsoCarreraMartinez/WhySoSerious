@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from domain.ports import MessageRepository
 from domain.models import Message, BertScores
 from infrastructure.persistence.mongo_client import mongo_client
@@ -21,7 +21,7 @@ class MongoMessageRepository(MessageRepository):
     # Returns all messages that haven't been processed by the BERT model yet.
     def get_unanalyzed(self) -> List[Message]:
         
-        cursor = self.collection.find({"scores": {"$exists": False}})
+        cursor = self.collection.find({"analyzed": False})
         
         return [Message(**doc) for doc in cursor] # Convert each MongoDB document into a Message model object using unpacking (**).
 

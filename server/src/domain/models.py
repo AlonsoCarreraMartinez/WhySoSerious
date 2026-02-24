@@ -12,7 +12,6 @@ class User(BaseModel):
     email: str  
     role: str   # "admin", "manager", "employee"
     teams: List[str] = []
-    password: str
 
 class Team(BaseModel):
     name: str = Field(alias="_id")
