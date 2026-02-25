@@ -125,6 +125,46 @@ class AzureTeamsProvider(TeamsProvider):
         except Exception:
             return []
         
-    # Checks user permissions, admin status, and owned teams.
+    # Checks user permissions, admin status, and owned teams from Azure.
     def get_user_permissions(self, email: str) -> dict:
-        return {"in_org": True, "is_admin": False, "managed_teams": []} # PLACEHOLDER
+        try:
+            token = self.get_valid_token()
+            headers = {'Authorization': f'Bearer {token}'}
+            
+            user_url = f"https://graph.microsoft.com/v1.0/users/{email}"
+            user_res = requests.get(user_url, headers=headers)
+            
+            if user_res.status_code != 200:
+                return {"in_org": False, "is_admin": False, "is_owner": False, "owned_teams": []}
+            
+            user_data = user_res.json()
+            user_id = user_data.get('id')
+
+            roles_url = f"https://graph.microsoft.com/v1.0/users/{user_id}/memberOf"
+            roles_res = requests.get(roles_url, headers=headers)
+            
+            is_admin = False
+            if roles_res.status_code == 200:
+                roles = roles_res.json().get('value', [])
+                is_admin = any(role.get('displayName') == "Global Administrator" for role in roles)
+
+            owned_url = f"https://graph.microsoft.com/v1.0/users/{user_id}/ownedObjects/microsoft.graph.group"
+            owned_res = requests.get(owned_url, headers=headers)
+            
+            owned_teams_ids = []
+            if owned_res.status_code == 200:
+                groups = owned_res.json().get('value', [])
+                owned_teams_ids = [
+                    g.get('id') for g in groups 
+                    if "Team" in g.get('resourceProvisioningOptions', [])
+                ]
+
+            return {
+                "in_org": True,
+                "is_admin": is_admin,
+                "is_owner": len(owned_teams_ids) > 0, 
+                "owned_teams": owned_teams_ids
+            }
+        except Exception:
+            return {"in_org": False, "is_admin": False, "is_owner": False, "owned_teams": []}
+            
