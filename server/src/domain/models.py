@@ -10,20 +10,26 @@ class User(BaseModel):
     username: str = Field(alias="_id")
     name: str   
     email: str  
-    role: str   # "admin", "manager", "employee"
+    role: str   # admin, manager, employee
     teams: List[str] = []
 
 class Team(BaseModel):
     name: str = Field(alias="_id")
     manager: str
+    visibility: str # public, private, org-wide.
     members: List[str] = []
     channels: List[str] = []
+    description: Optional[str] = None
     burnout_mean: Optional[BertScores] = None
 
 class Channel(BaseModel):
     id: str = Field(alias="_id")
     name: str 
     team_name: str
+    visibility: str # public, private, shared.
+    channel_type: str # chat, posts.
+    members: List[str] = []
+    description: Optional[str] = None
     burnout_mean: Optional[BertScores] = None
 
 
