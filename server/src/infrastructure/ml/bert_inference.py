@@ -4,7 +4,10 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipe
 from pathlib import Path
 
 class BertPredictor:
+
+    # Resolve absolute paths to locate local model weights.
     def __init__(self):
+
         current_dir = os.path.dirname(os.path.abspath(__file__))
         infra_dir = os.path.dirname(current_dir)
         src_dir = os.path.dirname(infra_dir)
@@ -15,29 +18,35 @@ class BertPredictor:
         try:
             print(f"LOADING MODELS FROM: {weights_base}")
 
-            self.toxic_pipe = self._load_local_pipeline(weights_base / "toxicity", "text-classification")
-            self.sarcasm_pipe = self._load_local_pipeline(weights_base / "sarcasm", "text-classification")
-            self.sentiment_pipe = self._load_local_pipeline(weights_base / "politeness", "sentiment-analysis")
+            self.toxic_pipe = self.load_local_pipeline(weights_base / "toxicity", "text-classification")
+            self.sarcasm_pipe = self.load_local_pipeline(weights_base / "sarcasm", "text-classification")
+            self.sentiment_pipe = self.load_local_pipeline(weights_base / "politeness", "sentiment-analysis")
             
             print("MODELS LOADED SUCCESSFULLY")
             
         except Exception as e:
-            print(f"CRITICAL ERROR LOADING MODELS: {e}")
+            print(f"ERROR LOADING MODELS: {e}")
             self.toxic_pipe = None
 
-    def _load_local_pipeline(self, path, task):
+    # Load model and tokenizer from local storage ensuring zero external network dependency.
+    def load_local_pipeline(self, path, task):
+
         model_path = os.path.abspath(str(path))
         model = AutoModelForSequenceClassification.from_pretrained(model_path, local_files_only=True)
         tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
         return pipeline(task, model=model, tokenizer=tokenizer)
 
-    def _get_results_safely(self, pipe, text):
+    # Standardize model outputs into a consistent list format for processing.
+    def get_results_safely(self, pipe, text):
+
         raw = pipe(text, top_k=None)
         if isinstance(raw, list) and len(raw) > 0:
             return raw[0] if isinstance(raw[0], list) else raw
         return []
 
+    # Validation gate to handle empty inputs or uninitialized inference engines.
     def predict(self, text):
+        
         if not text or not self.toxic_pipe:
             return {"politeness": 0.0, "sarcasm": 0.0, "toxicity": 0.0}
 
@@ -45,7 +54,7 @@ class BertPredictor:
             text_lower = text.lower()
             word_count = len(text.split())
 
-            toxic_results = self._get_results_safely(self.toxic_pipe, text)
+            toxic_results = self.get_results_safely(self.toxic_pipe, text)
             toxic_scores = []
             target_labels = ['toxicity', 'severe_toxicity', 'insult', 'threat', 'obscene', 'identity_attack']
             for res in toxic_results:
@@ -53,13 +62,13 @@ class BertPredictor:
                     toxic_scores.append(res.get('score', 0.0))
             toxic_score = max(toxic_scores) if toxic_scores else 0.0
             
-            sarcasm_results = self._get_results_safely(self.sarcasm_pipe, text)
+            sarcasm_results = self.get_results_safely(self.sarcasm_pipe, text)
             sarcasm_score = 0.0
             for res in sarcasm_results:
                 if isinstance(res, dict) and res.get('label') == 'irony':
                     sarcasm_score = res.get('score', 0.0)
 
-            sent_results = self._get_results_safely(self.sentiment_pipe, text)
+            sent_results = self.get_results_safely(self.sentiment_pipe, text)
             if sent_results:
                 top_sentiment = max(sent_results, key=lambda x: x.get('score', 0.0))
                 label = top_sentiment.get('label')

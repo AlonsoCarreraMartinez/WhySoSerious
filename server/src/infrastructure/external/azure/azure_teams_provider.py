@@ -94,7 +94,7 @@ class AzureTeamsProvider(TeamsProvider):
     # Fetch messages and their replies from a channel since the last sync date.
     def get_new_messages(self, team_id: str, channel_id: str, last_sync: Optional[str]) -> List[Message]:
         try:
-            url = f"https://graph.microsoft.com/v1.0/teams/{team_id}/channels/{channel_id}/messages?$expand=replies&$top=50"
+            url = f"https://graph.microsoft.com/v1.0/teams/{team_id}/channels/{channel_id}/messages?$expand=replies&$top=50" 
             headers = {'Authorization': f'Bearer {self.get_valid_token()}'}
             response = requests.get(url, headers=headers)
             

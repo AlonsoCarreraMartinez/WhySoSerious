@@ -1,16 +1,9 @@
 import os
-import argparse # Read command line arguments.
-from transformers import ( # Hugging Face toolkit.
+import argparse 
+from transformers import ( 
     AutoTokenizer,
     AutoModelForSequenceClassification
 )
-
-#############################################################################
-# The purpose of this script is to dowload and save the 3 Specialist Models.#
-#############################################################################
-
-# pip install -r requirements.txt
-
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Download and Save Specialist Models (Toxicity, Sarcasm, Politeness).")
@@ -23,9 +16,6 @@ def parse_args():
 
 # Helper function to download from Hugging Face and save to disk.
 def download_and_save_model(model_name, base_output_dir, subfolder_name):
-    """
-    Downloads the model and tokenizer and saves them to output_dir/subfolder_name.
-    """
     print(f"Downloading model: {model_name}...")
     
     try:
@@ -46,10 +36,6 @@ def download_and_save_model(model_name, base_output_dir, subfolder_name):
 def main():
     args = parse_args()
     
-    # Configuration of the 3 Expert Models to replace the old single BERT.
-    # Toxicity: unitary/unbiased-toxic-roberta
-    # Sarcasm: cardiffnlp/twitter-roberta-base-irony
-    # Politeness (Sentiment): cardiffnlp/twitter-roberta-base-sentiment-latest
     models_config = {
         "toxicity": "unitary/unbiased-toxic-roberta",
         "sarcasm": "cardiffnlp/twitter-roberta-base-irony",
