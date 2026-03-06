@@ -94,35 +94,48 @@ class AzureTeamsProvider(TeamsProvider):
     # Fetch messages and their replies from a channel since the last sync date.
     def get_new_messages(self, team_id: str, channel_id: str, last_sync: Optional[str]) -> List[Message]:
         try:
-            url = f"https://graph.microsoft.com/v1.0/teams/{team_id}/channels/{channel_id}/messages?$expand=replies&$top=50" 
-            headers = {'Authorization': f'Bearer {self.get_valid_token()}'}
-            response = requests.get(url, headers=headers)
-            
-            if response.status_code != 200:
-                return []
-            
-            raw_messages = response.json().get('value', [])
             domain_messages = []
+            skip = 0
+            top = 50
+            keep_fetching = True
+            token = self.get_valid_token()
+            headers = {'Authorization': f'Bearer {token}'}
 
-            
-            for msg in reversed(raw_messages):
-                msg_date = msg.get('createdDateTime')
+            while keep_fetching:
+                url = f"https://graph.microsoft.com/v1.0/teams/{team_id}/channels/{channel_id}/messages?$expand=replies&$top={top}&$skip={skip}"
                 
+                response = requests.get(url, headers=headers)
+                if response.status_code != 200:
+                    break
                 
-                if not last_sync or (msg_date and msg_date > last_sync):
-                    mapped = self.map_to_domain_message(msg, team_id, channel_id)
-                    if mapped: domain_messages.append(mapped)
+                data = response.json()
+                raw_messages = data.get('value', [])
                 
-                
-                replies = msg.get('replies', [])
-                for reply in reversed(replies):
-                    reply_date = reply.get('createdDateTime')
-                    if not last_sync or (reply_date and reply_date > last_sync):
-                        mapped_reply = self.map_to_domain_message(reply, team_id, channel_id)
-                        if mapped_reply: domain_messages.append(mapped_reply)
+                if len(raw_messages) < top:
+                    keep_fetching = False
+                else:
+                    skip += top
+
+                for msg in reversed(raw_messages):
+                    msg_date = msg.get('createdDateTime')
+                    
+                    if not last_sync or (msg_date and msg_date > last_sync):
+                        mapped = self.map_to_domain_message(msg, team_id, channel_id)
+                        if mapped:
+                            domain_messages.append(mapped)
+                    
+                    replies = msg.get('replies', [])
+                    for reply in reversed(replies):
+                        reply_date = reply.get('createdDateTime')
+                        if not last_sync or (reply_date and reply_date > last_sync):
+                            mapped_reply = self.map_to_domain_message(reply, team_id, channel_id)
+                            if mapped_reply:
+                                domain_messages.append(mapped_reply)
 
             return domain_messages
-        except Exception:
+            
+        except Exception as e:
+            print(f"Error: {e}")
             return []
         
     # Checks user permissions, admin status, and owned teams from Azure.
