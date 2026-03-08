@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Optional, List
-from .models import User, Team, Channel, Message, BertScores
+from .models import User, Team, Channel, Message, BertScores, ConversationSession, HealthTrend
 
 
 class UserRepository(ABC):
@@ -74,6 +74,29 @@ class MessageRepository(ABC):
     def get_last_sync_timestamp(self, channel_id: str) -> Optional[str]: 
         pass
 
+    # Returns the last message saved for a specific channel to compare timestamps.
+    @abstractmethod
+    def get_last_message_by_channel(self, channel_id: str) -> Optional[Message]:
+        pass
+
+
+class BurnoutRepository(ABC):
+
+    # Saves or updates a conversation session.
+    @abstractmethod
+    def save_session(self, session: ConversationSession): 
+        pass
+
+    # Retrieves all sessions for a specific channel.
+    @abstractmethod
+    def get_sessions_by_channel(self, channel_id: str) -> List[ConversationSession]: 
+        pass
+
+    # Saves a health trend point for historical charts.
+    @abstractmethod
+    def save_trend(self, trend: HealthTrend): 
+        pass
+
 
 class TeamsProvider(ABC):
 
@@ -104,6 +127,6 @@ class TeamsProvider(ABC):
 
     # Map a Graph API message dictionary to a domain Message model.
     @abstractmethod
-    def map_to_domain_message(self, data: dict, team_id: str, channel_id: str) -> Message: 
+    def map_to_domain_message(self, data: dict, team_id: str, channel_id: str, parent_id: Optional[str] = None) -> Optional[Message]:
         pass
     

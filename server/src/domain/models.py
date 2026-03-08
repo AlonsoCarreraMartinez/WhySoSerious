@@ -32,6 +32,14 @@ class Channel(BaseModel):
     description: Optional[str] = None
     burnout_mean: Optional[BertScores] = None
 
+class ConversationSession(BaseModel):
+    id: str = Field(alias="_id")  
+    channelId: str
+    teamId: str
+    startTime: str  
+    endTime: str
+    messageCount: int = 0
+    sessionScores: Optional[BertScores] = None
 
 class Message(BaseModel):
     externalId: str = Field(alias="_id")
@@ -42,8 +50,17 @@ class Message(BaseModel):
     teamName: Optional[str] = None    
     channelId: Optional[str] = None   
     channelName: Optional[str] = None 
+    sessionId: Optional[str] = None
+    parentId: Optional[str] = None 
     analyzed: bool = False
     scores: Optional[BertScores] = None 
 
     class Config:
         populate_by_name = True
+
+class HealthTrend(BaseModel):
+    id: Optional[str] = Field(None, alias="_id")
+    targetId: str  
+    date: str      
+    score: float
+    type: str

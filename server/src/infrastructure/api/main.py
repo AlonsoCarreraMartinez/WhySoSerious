@@ -7,6 +7,7 @@ from application.services.burnout_service import BurnoutService
 from infrastructure.persistence.repositories.mongo_message_repository import MongoMessageRepository
 from infrastructure.persistence.repositories.mongo_team_repository import MongoTeamRepository
 from infrastructure.persistence.repositories.mongo_channel_repository import MongoChannelRepository
+from infrastructure.persistence.repositories.mongo_burnout_repository import MongoBurnoutRepository
 from infrastructure.external.azure.azure_teams_provider import AzureTeamsProvider
 
 # python -m venv .venv
@@ -31,9 +32,10 @@ app.add_middleware(
 message_repo = MongoMessageRepository()
 team_repo = MongoTeamRepository()
 channel_repo = MongoChannelRepository()
+burnout_repo = MongoBurnoutRepository()
 azure_provider = AzureTeamsProvider()
 
-sync_service = SyncService(message_repo, azure_provider)
+sync_service = SyncService(message_repo, azure_provider, burnout_repo)
 burnout_service = BurnoutService(message_repo, team_repo, channel_repo)
 
 # Initialize the Background Task Scheduler to manage automated Cron Jobs.

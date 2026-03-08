@@ -65,14 +65,18 @@ class AzureTeamsProvider(TeamsProvider):
         return clean.strip()
 
     # Map a Graph API message dictionary to a domain Message model.
-    def map_to_domain_message(self, data: dict, team_id: str, channel_id: str) -> Optional[Message]:
-        body = data.get('body') or {}
-        raw_body = body.get('content')
+    def map_to_domain_message(self, data: dict, team_id: str, channel_id: str, parent_id: Optional[str] = None) -> Optional[Message]:
         
-        if not raw_body:
+        subject = data.get('subject')
+        body = data.get('body') or {}
+        raw_body = body.get('content', '')
+        
+        full_text = f"{subject}\n{raw_body}" if subject else raw_body
+        
+        if not full_text.strip():
             return None
             
-        clean_text = self.clean_message_content(raw_body)
+        clean_text = self.clean_message_content(full_text)
         if not clean_text:
             return None
         
@@ -87,6 +91,7 @@ class AzureTeamsProvider(TeamsProvider):
             timestamp=data.get('createdDateTime', ""),
             teamId=team_id,
             channelId=channel_id,
+            parentId=parent_id, 
             analyzed=False,
             scores=None
         )
@@ -102,7 +107,7 @@ class AzureTeamsProvider(TeamsProvider):
             headers = {'Authorization': f'Bearer {token}'}
 
             while keep_fetching:
-                url = f"https://graph.microsoft.com/v1.0/teams/{team_id}/channels/{channel_id}/messages?$expand=replies&$top={top}&$skip={skip}"
+                url = f"https://graph.microsoft.com/v1.0/teams/{team_id}/channels/{channel_id}/messages?$top={top}&$skip={skip}"
                 
                 response = requests.get(url, headers=headers)
                 if response.status_code != 200:
@@ -117,6 +122,7 @@ class AzureTeamsProvider(TeamsProvider):
                     skip += top
 
                 for msg in reversed(raw_messages):
+                    msg_id = msg.get('id')
                     msg_date = msg.get('createdDateTime')
                     
                     if not last_sync or (msg_date and msg_date > last_sync):
@@ -124,18 +130,22 @@ class AzureTeamsProvider(TeamsProvider):
                         if mapped:
                             domain_messages.append(mapped)
                     
-                    replies = msg.get('replies', [])
-                    for reply in reversed(replies):
-                        reply_date = reply.get('createdDateTime')
-                        if not last_sync or (reply_date and reply_date > last_sync):
-                            mapped_reply = self.map_to_domain_message(reply, team_id, channel_id)
-                            if mapped_reply:
-                                domain_messages.append(mapped_reply)
+                    replies_url = f"https://graph.microsoft.com/v1.0/teams/{team_id}/channels/{channel_id}/messages/{msg_id}/replies"
+                    replies_res = requests.get(replies_url, headers=headers)
+                    
+                    if replies_res.status_code == 200:
+                        replies_data = replies_res.json().get('value', [])
+                        for reply in reversed(replies_data):
+                            reply_date = reply.get('createdDateTime')
+                            if not last_sync or (reply_date and reply_date > last_sync):
+                                mapped_reply = self.map_to_domain_message(reply, team_id, channel_id, parent_id=msg_id)
+                                if mapped_reply:
+                                    domain_messages.append(mapped_reply)
 
             return domain_messages
             
         except Exception as e:
-            print(f"Error: {e}")
+            print(f"Error fetching messages: {e}")
             return []
         
     # Checks user permissions, admin status, and owned teams from Azure.

@@ -47,3 +47,13 @@ class MongoMessageRepository(MessageRepository):
         )
         
         return last_message.get("timestamp") if last_message else None
+    
+    # Returns the last message saved for a specific channel to compare timestamps.
+    def get_last_message_by_channel(self, channel_id: str) -> Optional[Message]:
+        doc = self.collection.find_one(
+            {"channelId": channel_id},
+            sort=[("timestamp", -1)]
+        )
+        if doc:
+            return Message(**doc)
+        return None
