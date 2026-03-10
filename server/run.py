@@ -40,10 +40,10 @@ def run_sync():
         azure_provider = AzureTeamsProvider()
 
         sync_service = SyncService(message_repo, azure_provider, burnout_repo)
-        burnout_service = BurnoutService(message_repo, team_repo, channel_repo)
+        burnout_service = BurnoutService(message_repo, team_repo, channel_repo, burnout_repo)
         
         sync_service.sync_messages()
-        burnout_service.analyzed_data()
+        burnout_service.analyze_data()
         
         print("\nSynchronization and analysis finished successfully")
         

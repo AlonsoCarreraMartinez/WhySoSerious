@@ -79,13 +79,4 @@ class SyncService:
                         msg.sessionId = new_session_id
             else:
                 msg.sessionId = new_session_id
-
-        session_data = ConversationSession(
-            _id=msg.sessionId,
-            channelId=channel_id,
-            teamId=team_id,
-            startTime=msg.timestamp, 
-            endTime=msg.timestamp,   
-            messageCount=1
-        )
-        self.burnout_repo.save_session(session_data)
+        

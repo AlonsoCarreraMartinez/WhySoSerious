@@ -1,6 +1,6 @@
 from typing import List, Optional
 from domain.ports import MessageRepository
-from domain.models import Message, BertScores
+from domain.models import Message
 from infrastructure.persistence.mongo_client import mongo_client
 
 class MongoMessageRepository(MessageRepository):
@@ -25,15 +25,17 @@ class MongoMessageRepository(MessageRepository):
         
         return [Message(**doc) for doc in cursor] # Convert each MongoDB document into a Message model object using unpacking (**).
 
-    # Updates a message with the calculated AI scores and marks it as analyzed.
-    def update_scores(self, message_id: str, scores: BertScores):
-        
-        self.collection.update_one(
-            {"_id": message_id},
+    # Marks a list of messages as analyzed and clears their content for privacy.
+    def mark_as_analyzed(self, message_ids: List[str]):
+        if not message_ids:
+            return
+            
+        self.collection.update_many(
+            {"_id": {"$in": message_ids}},
             {
                 "$set": {
-                    "scores": scores.model_dump(),
-                    "analyzed": True
+                    "analyzed": True,
+                    "content": None  
                 }
             }
         )

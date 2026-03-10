@@ -1,6 +1,6 @@
 from typing import List
 from domain.ports import ChannelRepository
-from domain.models import Channel, BertScores
+from domain.models import Channel, MBIScores
 from infrastructure.persistence.mongo_client import mongo_client
 
 class MongoChannelRepository(ChannelRepository):
@@ -17,7 +17,7 @@ class MongoChannelRepository(ChannelRepository):
         return [Channel(**doc) for doc in cursor] # Convert each MongoDB document into a Channel model object using unpacking (**).
 
     # Update the specific channel's scores calculated by the AI.
-    def update_burnout_metrics(self, channel_id: str, scores: BertScores):
+    def update_burnout_metrics(self, channel_id: str, scores: MBIScores):
         
         self.collection.update_one(
             {"_id": channel_id},

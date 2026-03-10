@@ -36,7 +36,7 @@ burnout_repo = MongoBurnoutRepository()
 azure_provider = AzureTeamsProvider()
 
 sync_service = SyncService(message_repo, azure_provider, burnout_repo)
-burnout_service = BurnoutService(message_repo, team_repo, channel_repo)
+burnout_service = BurnoutService(message_repo, team_repo, channel_repo, burnout_repo)
 
 # Initialize the Background Task Scheduler to manage automated Cron Jobs.
 task_scheduler = TaskScheduler(sync_service, burnout_service)

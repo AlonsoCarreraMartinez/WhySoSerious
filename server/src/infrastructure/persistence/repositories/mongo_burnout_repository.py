@@ -12,6 +12,15 @@ class MongoBurnoutRepository(BurnoutRepository):
 
     # Saves or updates a conversation session.
     def save_session(self, session: ConversationSession):
+        
+        update_data = {
+            "endTime": session.endTime,
+            "messageCount": session.messageCount
+        }
+        
+        if session.sessionScores:
+            update_data["sessionScores"] = session.sessionScores.model_dump()
+
         self.sessions_collection.update_one(
             {"_id": session.id},
             {
@@ -19,14 +28,8 @@ class MongoBurnoutRepository(BurnoutRepository):
                     "channelId": session.channelId,
                     "teamId": session.teamId,
                     "startTime": session.startTime,
-                    "sessionScores": None
                 },
-                "$set": {
-                    "endTime": session.endTime
-                },
-                "$inc": {
-                    "messageCount": 1
-                }
+                "$set": update_data
             },
             upsert=True
         )

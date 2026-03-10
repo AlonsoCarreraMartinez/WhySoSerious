@@ -1,6 +1,8 @@
+import uuid
 from typing import List, Dict
-from domain.models import BertScores, Message
-from domain.ports import MessageRepository, TeamRepository, ChannelRepository
+from datetime import datetime
+from domain.models import MBIScores, Message, ConversationSession
+from domain.ports import MessageRepository, TeamRepository, ChannelRepository, BurnoutRepository
 from src.infrastructure.ml.bert_inference import BertPredictor
 
 class BurnoutService:
@@ -10,18 +12,20 @@ class BurnoutService:
         self, 
         message_repo: MessageRepository, 
         team_repo: TeamRepository, 
-        channel_repo: ChannelRepository
+        channel_repo: ChannelRepository,
+        burnout_repo: BurnoutRepository 
     ):
         
-        # Store repositories and initialize the AI model.
+        # Store repositories and initialize the local AI model.
         self.message_repo = message_repo
         self.team_repo = team_repo
         self.channel_repo = channel_repo
+        self.burnout_repo = burnout_repo
         self.predictor = BertPredictor()
 
 
-    # Analyze new messages and update global scores.
-    def analyzed_data(self):
+    # Group unanalyzed messages into sessions, analyze them, and purge text.
+    def analyze_data(self):
     
         unanalyzed_messages = self.message_repo.get_unanalyzed()
         
@@ -29,80 +33,104 @@ class BurnoutService:
             print("No new messages.")
             return
 
-        print(f"Analyzing {len(unanalyzed_messages)} new messages")
+        print(f"Batching {len(unanalyzed_messages)} new messages into sessions...")
 
+        sessions_data = {}
         for msg in unanalyzed_messages:
-
-            if not msg.content:
-
-                empty_messages = BertScores(politeness=0.0, sarcasm=0.0, toxicity=0.0)
-                self.message_repo.update_scores(msg.externalId, empty_messages)
+            if not msg.content or not msg.sessionId:
                 continue
+            
+            sid = msg.sessionId
+            if sid not in sessions_data:
+                sessions_data[sid] = {"channelId": msg.channelId, "teamId": msg.teamId, "msgs": []}
+            
+            sessions_data[sid]["msgs"].append(msg)
 
-            results = self.predictor.predict(msg.content)
-            scores = BertScores(**results)
-            self.message_repo.update_scores(msg.externalId, scores)
+        for session_id, data in sessions_data.items():
+            msgs = data["msgs"]
+            channel_id = data["channelId"]
+            team_id = data["teamId"]
+            
+            session_text = " ".join([m.content for m in msgs])
+            
+            results = self.predictor.extract_content_features(session_text)
+            scores = MBIScores(**results)
+            
+            session = ConversationSession(
+                _id=session_id,  
+                channelId=channel_id,
+                teamId=team_id,
+                startTime=msgs[0].timestamp, 
+                endTime=msgs[-1].timestamp, 
+                messageCount=len(msgs),
+                sessionScores=scores
+            )
+            self.burnout_repo.save_session(session)
+            
+            msg_ids = [m.externalId for m in msgs]
+            self.message_repo.mark_as_analyzed(msg_ids)
+            print(f"Session {session_id} analyzed and {len(msgs)} messages purged.")
 
-        print("Updating global team and channel scores.")
+        print("Updating global team and channel scores...")
         self.update_global_scores()
         print("Analysis complete.")
 
-    # Update global team and channel scores
+    # Calculate true mathematical means using Sessions (Not individual messages).
     def update_global_scores(self):
         
-        target_teams = ["León", "Oviedo", "La Bañeza"] # Filter for target teams.
+        teams = self.team_repo.get_all()
 
-        for team_name in target_teams:
-           
-            query = {"teamName": team_name, "analyzed": True}
-            messages = list(self.message_repo.collection.find(query))
+        for team in teams:
             
-            if not messages:
+            channels = self.channel_repo.get_by_team(team.name) 
+            if not channels:
                 continue
-
-            total = len(messages)
-            sums = {"p": 0.0, "s": 0.0, "t": 0.0}
-            
-            for m in messages:
-                sc = m["scores"]
-                sums["p"] += sc["politeness"]
-                sums["s"] += sc["sarcasm"]
-                sums["t"] += sc["toxicity"]
-
-            mean_scores = BertScores(
-                politeness=round(sums["p"] / total, 2),
-                sarcasm=round(sums["s"] / total, 2),
-                toxicity=round(sums["t"] / total, 2)
-            )
-
-            self.team_repo.update_burnout_metrics(team_name, mean_scores)
-            print(f"Metrics updated for Team: {team_name}")
-
-            channels_in_team = self.message_repo.collection.distinct("channelName", {"teamName": team_name})
-
-            for channel_name in channels_in_team:
                 
-                query_channel = {"channelName": channel_name, "teamName": team_name, "analyzed": True}
-                channel_messages = list(self.message_repo.collection.find(query_channel))
+            team_sums = {"e": 0.0, "c": 0.0, "i": 0.0, "b": 0.0}
+            team_session_count = 0
 
-                if channel_messages:
+            for channel in channels:
+                
+                sessions = self.burnout_repo.get_sessions_by_channel(channel.id)
+                if not sessions:
+                    continue
+
+                chan_sums = {"e": 0.0, "c": 0.0, "i": 0.0, "b": 0.0}
+                valid_chan_sessions = 0
+                
+                for s in sessions:
+                    if s.sessionScores:
+                        chan_sums["e"] += s.sessionScores.exhaustion
+                        chan_sums["c"] += s.sessionScores.cynicism
+                        chan_sums["i"] += s.sessionScores.inefficacy
+                        chan_sums["b"] += s.sessionScores.burnout_index
+                        valid_chan_sessions += 1
+
+                if valid_chan_sessions > 0:
                     
-                    channel_id = channel_messages[0]["channelId"]
-                    
-                    total_c = len(channel_messages)
-                    sums_c = {"p": 0.0, "s": 0.0, "t": 0.0}
-
-                    for m in channel_messages:
-                        sc = m["scores"]
-                        sums_c["p"] += sc["politeness"]
-                        sums_c["s"] += sc["sarcasm"]
-                        sums_c["t"] += sc["toxicity"]
-
-                    mean_chan = BertScores(
-                        politeness=round(sums_c["p"] / total_c, 2),
-                        sarcasm=round(sums_c["s"] / total_c, 2),
-                        toxicity=round(sums_c["t"] / total_c, 2)
+                    mean_chan = MBIScores(
+                        exhaustion=round(chan_sums["e"] / valid_chan_sessions, 2),
+                        cynicism=round(chan_sums["c"] / valid_chan_sessions, 2),
+                        inefficacy=round(chan_sums["i"] / valid_chan_sessions, 2),
+                        burnout_index=round(chan_sums["b"] / valid_chan_sessions, 2)
                     )
-                        
-                    self.channel_repo.update_burnout_metrics(channel_id, mean_chan)
-                    print(f"  > Metrics updated for Channel: '{channel_name}' (Team: {team_name})")
+                    
+                    self.channel_repo.update_burnout_metrics(channel.id, mean_chan)
+                    print(f"  > Metrics updated for Channel: '{channel.name}'")
+
+                    team_sums["e"] += chan_sums["e"]
+                    team_sums["c"] += chan_sums["c"]
+                    team_sums["i"] += chan_sums["i"]
+                    team_sums["b"] += chan_sums["b"]
+                    team_session_count += valid_chan_sessions
+
+            if team_session_count > 0:
+                mean_team = MBIScores(
+                    exhaustion=round(team_sums["e"] / team_session_count, 2),
+                    cynicism=round(team_sums["c"] / team_session_count, 2),
+                    inefficacy=round(team_sums["i"] / team_session_count, 2),
+                    burnout_index=round(team_sums["b"] / team_session_count, 2)
+                )
+                
+                self.team_repo.update_burnout_metrics(team.name, mean_team)
+                print(f"Metrics updated for Team: {team.name}")

@@ -80,20 +80,14 @@ class AzureTeamsProvider(TeamsProvider):
         if not clean_text:
             return None
         
-        from_data = data.get('from') or {}
-        user_data = from_data.get('user') or {}
-        sender_name = user_data.get('displayName', 'System')
-        
         return Message(
             externalId=data.get('id'),
             content=clean_text,
-            sender=sender_name,
             timestamp=data.get('createdDateTime', ""),
             teamId=team_id,
             channelId=channel_id,
             parentId=parent_id, 
-            analyzed=False,
-            scores=None
+            analyzed=False
         )
 
     # Fetch messages and their replies from a channel since the last sync date.

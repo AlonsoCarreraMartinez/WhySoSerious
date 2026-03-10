@@ -1,6 +1,6 @@
 from typing import Optional, List
 from domain.ports import TeamRepository
-from domain.models import Team, BertScores
+from domain.models import Team, MBIScores
 from infrastructure.persistence.mongo_client import mongo_client
 
 class MongoTeamRepository(TeamRepository):
@@ -27,7 +27,7 @@ class MongoTeamRepository(TeamRepository):
         return [Team(**doc) for doc in cursor] # Convert each MongoDB document into a Team model object using unpacking (**).
 
     # Update the team's global scores calculated by the BurnoutService.
-    def update_burnout_metrics(self, team_id: str, scores: BertScores):
+    def update_burnout_metrics(self, team_id: str, scores: MBIScores):
         
         self.collection.update_one(
             {"_id": team_id},
@@ -37,6 +37,5 @@ class MongoTeamRepository(TeamRepository):
 
     # Fetches all teams stored in the database.
     def get_all(self) -> List[Team]:
-
         cursor = self.collection.find({})
-        return [Team(**doc) for doc in cursor] # Convert each MongoDB document into a Team model object using unpacking (**).
+        return [Team(**doc) for doc in cursor]

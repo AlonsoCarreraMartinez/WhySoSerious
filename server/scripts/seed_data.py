@@ -17,6 +17,8 @@ def seed_database():
     db.teams.drop()
     db.channels.drop()
     db.messages.drop()
+    db.sessions.drop()  
+    db.trends.drop()    
 
     users = [
         {"_id": "alonso@ww5dl.onmicrosoft.com", "name": "Alonso Carrera", "role": "employee", "teams": ["Oviedo", "La Bañeza", "León"]},
@@ -34,11 +36,11 @@ def seed_database():
 
     channels = [
         {"_id": "19:V9L6UbA2VFe687KF-be3mDmUGRFO-xrynXuxweCYBdU1@thread.tacv2", "name": "General", "team_name": "Oviedo", "visibility": "public", "channel_type": "chat", "members": m_oviedo, "description": None, "burnout_mean": None},
-        {"_id": "19:05601fabb9c24d0d8b886a81930db632@thread.tacv2", "name": "Backlogs", "team_name": "Oviedo", "visibility": "public", "channel_type": "posts", "members": m_oviedo, "description": None, "burnout_mean": None},
+        {"_id": "19:05601fabb9c24d0d8b886a81930db632@thread.tacv2", "name": "Backlogs", "team_name": "Oviedo", "visibility": "public", "channel_type": "post", "members": m_oviedo, "description": None, "burnout_mean": None},
         {"_id": "19:fkU-S486HJhltOLqMvIPEjG5ysazsLRRJkTVaUSWR3Q1@thread.tacv2", "name": "General", "team_name": "La Bañeza", "visibility": "public", "channel_type": "chat", "members": m_banneza, "description": None, "burnout_mean": None},
-        {"_id": "19:afa71eb9c66f4b60a30c705e393508fb@thread.tacv2", "name": "Backlogs", "team_name": "La Bañeza", "visibility": "public", "channel_type": "posts", "members": m_banneza, "description": None, "burnout_mean": None},
+        {"_id": "19:afa71eb9c66f4b60a30c705e393508fb@thread.tacv2", "name": "Backlogs", "team_name": "La Bañeza", "visibility": "public", "channel_type": "post", "members": m_banneza, "description": None, "burnout_mean": None},
         {"_id": "19:qWJHf8j1OmMmc2OvIR2bfHF5Il5ZRNoo6Ou0JvhSzao1@thread.tacv2", "name": "General", "team_name": "León", "visibility": "public", "channel_type": "chat", "members": m_leon, "description": None, "burnout_mean": None},
-        {"_id": "19:16ddf8b922294f76b8738c2cd07de9d6@thread.tacv2", "name": "Backlogs", "team_name": "León", "visibility": "public", "channel_type": "posts", "members": m_leon, "description": None, "burnout_mean": None}
+        {"_id": "19:16ddf8b922294f76b8738c2cd07de9d6@thread.tacv2", "name": "Backlogs", "team_name": "León", "visibility": "public", "channel_type": "post", "members": m_leon, "description": None, "burnout_mean": None}
     ]
     db.channels.insert_many(channels)
 
@@ -51,3 +53,4 @@ def seed_database():
 
 if __name__ == "__main__":
     seed_database()
+    print("Database created.")

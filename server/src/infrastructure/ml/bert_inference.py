@@ -4,10 +4,9 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipe
 from pathlib import Path
 
 class BertPredictor:
-
-    # Resolve absolute paths to locate local model weights.
+    
+    # Resolve absolute paths and load local model weights.
     def __init__(self):
-
         current_dir = os.path.dirname(os.path.abspath(__file__))
         infra_dir = os.path.dirname(current_dir)
         src_dir = os.path.dirname(infra_dir)
@@ -16,103 +15,60 @@ class BertPredictor:
         weights_base = Path(backend_dir) / "weights" / "models" / "hf_bert_reg"
         
         try:
-            print(f"LOADING MODELS FROM: {weights_base}")
+            print(f"LOADING MODELS")
 
-            self.toxic_pipe = self.load_local_pipeline(weights_base / "toxicity", "text-classification")
-            self.sarcasm_pipe = self.load_local_pipeline(weights_base / "sarcasm", "text-classification")
-            self.sentiment_pipe = self.load_local_pipeline(weights_base / "politeness", "sentiment-analysis")
+            self.cynicism_pipe = self.load_local_pipeline(weights_base / "cynicism", "text-classification")
+            self.exhaustion_pipe = self.load_local_pipeline(weights_base / "exhaustion", "sentiment-analysis")
+            self.inefficacy_pipe = self.load_local_pipeline(weights_base / "inefficacy", "zero-shot-classification")
             
             print("MODELS LOADED SUCCESSFULLY")
-            
         except Exception as e:
-            print(f"ERROR LOADING MODELS: {e}")
-            self.toxic_pipe = None
+            print(f"ERROR: {e}")
+            self.cynicism_pipe = None
 
-    # Load model and tokenizer from local storage ensuring zero external network dependency.
+    # Helper to initialize a transformer pipeline from local storage.
     def load_local_pipeline(self, path, task):
-
         model_path = os.path.abspath(str(path))
-        model = AutoModelForSequenceClassification.from_pretrained(model_path, local_files_only=True)
-        tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
-        return pipeline(task, model=model, tokenizer=tokenizer)
+        return pipeline(task, model=model_path, tokenizer=model_path)
 
-    # Standardize model outputs into a consistent list format for processing.
-    def get_results_safely(self, pipe, text):
-
-        raw = pipe(text, top_k=None)
-        if isinstance(raw, list) and len(raw) > 0:
-            return raw[0] if isinstance(raw[0], list) else raw
-        return []
-
-    # Validation gate to handle empty inputs or uninitialized inference engines.
-    def predict(self, text):
-        
-        if not text or not self.toxic_pipe:
-            return {"politeness": 0.0, "sarcasm": 0.0, "toxicity": 0.0}
+    # Analyze text to extract mathematical probabilities for MBI dimensions.
+    def extract_content_features(self, text: str) -> dict:
+        if not text or not self.cynicism_pipe:
+            return {"exhaustion": 0.0, "cynicism": 0.0, "inefficacy": 0.0, "burnout_index": 0.0}
 
         try:
-            text_lower = text.lower()
-            word_count = len(text.split())
-
-            toxic_results = self.get_results_safely(self.toxic_pipe, text)
-            toxic_scores = []
-            target_labels = ['toxicity', 'severe_toxicity', 'insult', 'threat', 'obscene', 'identity_attack']
-            for res in toxic_results:
-                if isinstance(res, dict) and res.get('label') in target_labels:
-                    toxic_scores.append(res.get('score', 0.0))
-            toxic_score = max(toxic_scores) if toxic_scores else 0.0
-            
-            sarcasm_results = self.get_results_safely(self.sarcasm_pipe, text)
-            sarcasm_score = 0.0
-            for res in sarcasm_results:
-                if isinstance(res, dict) and res.get('label') == 'irony':
-                    sarcasm_score = res.get('score', 0.0)
-
-            sent_results = self.get_results_safely(self.sentiment_pipe, text)
-            if sent_results:
-                top_sentiment = max(sent_results, key=lambda x: x.get('score', 0.0))
-                label = top_sentiment.get('label')
-                score = top_sentiment.get('score', 0.0)
+            # Cynicism
+            toxic_raw = self.cynicism_pipe(text)[0]
+            if isinstance(toxic_raw, list):
+                cynicism_prob = max([r['score'] for r in toxic_raw if r.get('label') != 'neutral'], default=0.0)
             else:
-                label, score = 'neutral', 0.0
+                cynicism_prob = toxic_raw['score'] if toxic_raw.get('label') != 'neutral' else 0.0
 
-            politeness_score = 5.0
-            if label == 'positive':
-                politeness_score = 5.0 + (score * 5.0)
-            elif label == 'neutral':
-                politeness_score = 5.0
-            elif label == 'negative':
-                politeness_score = 5.0 - (score * 5.0)
+            # Exhaustion
+            sent_raw = self.exhaustion_pipe(text)[0]
+            if isinstance(sent_raw, list): 
+                sent_raw = sent_raw[0]
+            exhaustion_prob = sent_raw['score'] if sent_raw.get('label') in ['negative', 'LABEL_0'] else 0.0
 
-            if word_count < 4 and toxic_score < 0.3:
-                sarcasm_score *= 0.2
+            # Inefficacy (Zero-shot)
+            candidate_labels = ["technical block", "stuck", "making progress", "task completed"]
+            zs_res = self.inefficacy_pipe(text, candidate_labels=candidate_labels)
+            
+            inefficacy_prob = 0.0
+            if zs_res['labels'][0] in ["technical block", "stuck"]:
+                inefficacy_prob = zs_res['scores'][0]
 
-            status_keywords = ["successfully", "fixed", "resolved", "completed", "scheduled", "maintenance", "updated", "deployed"]
-            if any(word in text_lower for word in status_keywords) and toxic_score < 0.3:
-                sarcasm_score *= 0.2 
-
-            condescending_phrases = ["maybe you should", "i guess i have to", "clearly you didn't", "obvious", "explain everything"]
-            if any(phrase in text_lower for phrase in condescending_phrases):
-                politeness_score = min(politeness_score, 3.0)
-
-            if sarcasm_score * 10.0 > 7.5 and politeness_score > 6.0:
-                 politeness_score = max(0.0, 10.0 - politeness_score)
-
-            polite_keywords = ["please", "thank", "appreciate", "kindly", "excuse me", "grateful"]
-            if any(word in text_lower for word in polite_keywords):
-                if sarcasm_score * 10.0 < 7.5:
-                    if politeness_score < 7.0: politeness_score = 7.5
-                    else: politeness_score = min(10.0, politeness_score + 1.0)
-
-            if politeness_score < 3.5 and toxic_score < 0.2:
-                toxic_score += 0.25 
+            e_val = round(float(exhaustion_prob), 2)
+            c_val = round(float(cynicism_prob), 2)
+            i_val = round(float(inefficacy_prob), 2)
+            b_index = round((e_val + c_val + i_val) / 3, 2)
 
             return {
-                "politeness": round(float(np.clip(politeness_score, 0.0, 10.0)), 2),
-                "sarcasm": round(float(np.clip(sarcasm_score * 10.0, 0.0, 10.0)), 2),
-                "toxicity": round(float(np.clip(toxic_score * 10.0, 0.0, 10.0)), 2)
+                "exhaustion": e_val,
+                "cynicism": c_val,
+                "inefficacy": i_val,
+                "burnout_index": b_index
             }
-
         except Exception as e:
-            print(f"PREDICTION ERROR: {e}")
-            return {"politeness": 0.0, "sarcasm": 0.0, "toxicity": 0.0}
+            print(f"INFERENCE ERROR: {e}")
+            return {"exhaustion": 0.0, "cynicism": 0.0, "inefficacy": 0.0, "burnout_index": 0.0}

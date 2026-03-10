@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Optional, List
-from .models import User, Team, Channel, Message, BertScores, ConversationSession, HealthTrend
+from .models import User, Team, Channel, Message, MBIScores, ConversationSession, HealthTrend
 
 
 class UserRepository(ABC):
@@ -30,7 +30,7 @@ class TeamRepository(ABC):
 
     # Update teams's bert scores.
     @abstractmethod
-    def update_burnout_metrics(self, team_id: str, scores: BertScores): 
+    def update_burnout_metrics(self, team_id: str, scores: MBIScores): 
         pass
 
     # Fetches all teams stored in the database.
@@ -48,7 +48,7 @@ class ChannelRepository(ABC):
 
     # Update channel's bert scores.
     @abstractmethod
-    def update_burnout_metrics(self, channel_id: str, scores: BertScores): 
+    def update_burnout_metrics(self, channel_id: str, scores: MBIScores): 
         pass
 
 
@@ -64,11 +64,6 @@ class MessageRepository(ABC):
     def get_unanalyzed(self) -> List[Message]: 
         pass
 
-    # Save BERT scores and mark as analyzed.
-    @abstractmethod
-    def update_scores(self, message_id: str, scores: BertScores): 
-        pass
-
     # Returns the timestamp of the last message saved for a specific channel.
     @abstractmethod
     def get_last_sync_timestamp(self, channel_id: str) -> Optional[str]: 
@@ -77,6 +72,11 @@ class MessageRepository(ABC):
     # Returns the last message saved for a specific channel to compare timestamps.
     @abstractmethod
     def get_last_message_by_channel(self, channel_id: str) -> Optional[Message]:
+        pass
+
+    # Marks a list of messages as analyzed and clears their content for privacy.
+    @abstractmethod
+    def mark_as_analyzed(self, message_ids: List[str]): 
         pass
 
 
