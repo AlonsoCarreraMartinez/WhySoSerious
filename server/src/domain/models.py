@@ -2,10 +2,11 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 
 class MBIScores(BaseModel):
-    exhaustion: float    # Emotional Exhaustion. 
-    cynicism: float      # Cynicism, Depersonalization. 
-    inefficacy: float    # Professional Inefficacy, Technical Block.
-    burnout_index: float # Global burnout index.
+    exhaustion: float    
+    cynicism: float       
+    inefficacy: float    
+    burnout_index: float 
+    wbi: Optional[float] = None 
 
 class User(BaseModel):
     username: str = Field(alias="_id")
@@ -41,6 +42,12 @@ class ConversationSession(BaseModel):
     endTime: str
     messageCount: int = 0
     sessionScores: Optional[MBIScores] = None
+    overtime_factor: float = 1.0
+    density: float = 0.0
+    latency: float = 0.0
+
+    class Config:
+        populate_by_name = True
 
 class Message(BaseModel):
     externalId: str = Field(alias="_id")

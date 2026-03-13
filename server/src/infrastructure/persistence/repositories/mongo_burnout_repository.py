@@ -41,4 +41,4 @@ class MongoBurnoutRepository(BurnoutRepository):
 
     # Saves a health trend point for historical charts.
     def save_trend(self, trend: HealthTrend):
-        self.trends_collection.insert_one(trend.model_dump(by_alias=True))
+        self.trends_collection.insert_one(trend.model_dump(by_alias=True, exclude_none=True))
