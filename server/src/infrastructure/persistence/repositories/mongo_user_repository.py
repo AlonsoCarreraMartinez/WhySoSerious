@@ -12,7 +12,7 @@ class MongoUserRepository(UserRepository):
     # Fetches a user by their MongoDB ID or external ID.
     def get_by_id(self, user_id: str) -> Optional[User]:
         
-        user_data = self.collection.find_one({"externalId": user_id})
+        user_data = self.collection.find_one({"_id": user_id})
 
         if user_data:
             return User(**user_data) # Convert each MongoDB document into a User model object using unpacking (**).
@@ -22,7 +22,7 @@ class MongoUserRepository(UserRepository):
     # Fetches a user by their email address for authentication.
     def get_by_email(self, email: str) -> Optional[User]:
 
-        user_data = self.collection.find_one({"email": email})
+        user_data = self.collection.find_one({"_id": email})
         
         if user_data:
             return User(**user_data) # Convert each MongoDB document into a User model object using unpacking (**).

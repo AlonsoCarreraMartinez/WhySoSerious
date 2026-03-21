@@ -21,7 +21,7 @@ class TaskScheduler:
         try:
 
             self.sync_service.sync_messages()
-            self.burnout_service.analyzed_data()
+            self.burnout_service.analyze_data()
 
             print("[CRON JOB] Background tasks completed successfully\n")
 

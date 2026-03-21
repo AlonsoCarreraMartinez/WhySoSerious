@@ -22,7 +22,7 @@ class MongoTeamRepository(TeamRepository):
     # Search for all teams where the manager field matches the provided email/ID.
     def get_by_manager(self, manager: str) -> List[Team]:
        
-        cursor = self.collection.find({"manager": manager})
+        cursor = self.collection.find({"managers": manager})
         
         return [Team(**doc) for doc in cursor] # Convert each MongoDB document into a Team model object using unpacking (**).
 

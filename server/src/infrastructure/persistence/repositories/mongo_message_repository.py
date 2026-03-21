@@ -13,7 +13,7 @@ class MongoMessageRepository(MessageRepository):
     def save(self, message: Message):
     
         self.collection.update_one(
-            {"_id": message.externalId},
+            {"_id": message.id},
             {"$set": message.model_dump(by_alias=True)},
             upsert=True
         )
@@ -59,3 +59,16 @@ class MongoMessageRepository(MessageRepository):
         if doc:
             return Message(**doc)
         return None
+    
+    # Retrieves the last N messages from a channel before a specific timestamp for context.
+    def get_previous_messages(self, channel_id: str, start_time_str: str, limit: int = 5) -> List[Message]:
+        
+        cursor = self.collection.find({
+            "channelId": channel_id,
+            "timestamp": {"$lt": start_time_str}
+        }).sort("timestamp", -1).limit(limit)
+        
+        messages = [Message(**doc) for doc in cursor]
+        messages.reverse()
+        
+        return messages

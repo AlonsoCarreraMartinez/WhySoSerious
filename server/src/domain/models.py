@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Literal
 
 class MBIScores(BaseModel):
     exhaustion: float    
@@ -9,16 +9,16 @@ class MBIScores(BaseModel):
     wbi: Optional[float] = None 
 
 class User(BaseModel):
-    username: str = Field(alias="_id")
+    email: str = Field(alias="_id")
     name: str   
-    email: str  
-    role: str   # admin, manager, employee
+    role: Literal["admin", "employee"]
+    managed_teams: List[str] = []
     teams: List[str] = []
 
 class Team(BaseModel):
     name: str = Field(alias="_id")
-    manager: str
-    visibility: str # public, private, org-wide.
+    managers: List[str] = []
+    visibility: Literal["public", "private", "org-wide"] 
     members: List[str] = []
     channels: List[str] = []
     description: Optional[str] = None
@@ -28,8 +28,8 @@ class Channel(BaseModel):
     id: str = Field(alias="_id")
     name: str 
     team_name: str
-    visibility: str # public, private, shared.
-    channel_type: str # chat, posts.
+    visibility: Literal["public", "private", "shared"]
+    channel_type: Literal["chat", "post"] 
     members: List[str] = []
     description: Optional[str] = None
     burnout_mean: Optional[MBIScores] = None
@@ -50,7 +50,7 @@ class ConversationSession(BaseModel):
         populate_by_name = True
 
 class Message(BaseModel):
-    externalId: str = Field(alias="_id")
+    id: str = Field(alias="_id")
     content: Optional[str] = None
     timestamp: str 
     teamId: Optional[str] = None      

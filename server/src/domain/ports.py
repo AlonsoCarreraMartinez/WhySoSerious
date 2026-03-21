@@ -79,6 +79,11 @@ class MessageRepository(ABC):
     def mark_as_analyzed(self, message_ids: List[str]): 
         pass
 
+    # Retrieves the last N messages from a channel before a specific timestamp.
+    @abstractmethod
+    def get_previous_messages(self, channel_id: str, start_time_str: str, limit: int = 5) -> List[Message]:
+        pass
+
 
 class BurnoutRepository(ABC):
 

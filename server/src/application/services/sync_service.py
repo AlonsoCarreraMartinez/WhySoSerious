@@ -58,7 +58,7 @@ class SyncService:
         if msg.parentId:
             msg.sessionId = f"session_{msg.parentId}"
         else:
-            new_session_id = f"session_{msg.externalId}"
+            new_session_id = f"session_{msg.id}"
             
             if msg.channelName == "General":
                 last_msg = self.message_repo.get_last_message_by_channel(channel_id)

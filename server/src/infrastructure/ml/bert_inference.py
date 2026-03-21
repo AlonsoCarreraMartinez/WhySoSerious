@@ -32,43 +32,60 @@ class BertPredictor:
         return pipeline(task, model=model_path, tokenizer=model_path)
 
     # Analyze text to extract mathematical probabilities for MBI dimensions.
-    def extract_content_features(self, text: str) -> dict:
-        if not text or not self.cynicism_pipe:
+    def extract_content_features(self, text: str):
+        if not text or not text.strip():
             return {"exhaustion": 0.0, "cynicism": 0.0, "inefficacy": 0.0, "burnout_index": 0.0}
 
-        try:
+        words = text.split()
+        chunk_size = 350 
+        
+        chunks = [" ".join(words[i:i + chunk_size]) for i in range(0, len(words), chunk_size)]
+        
+        e_scores = []
+        c_scores = []
+        i_scores = []
+
+        for chunk in chunks:
+            if not chunk.strip():
+                continue
+
             # Cynicism
-            toxic_raw = self.cynicism_pipe(text)[0]
+            toxic_raw = self.cynicism_pipe(chunk)[0]
             if isinstance(toxic_raw, list):
                 cynicism_prob = max([r['score'] for r in toxic_raw if r.get('label') != 'neutral'], default=0.0)
             else:
                 cynicism_prob = toxic_raw['score'] if toxic_raw.get('label') != 'neutral' else 0.0
 
             # Exhaustion
-            sent_raw = self.exhaustion_pipe(text)[0]
+            sent_raw = self.exhaustion_pipe(chunk)[0]
             if isinstance(sent_raw, list): 
                 sent_raw = sent_raw[0]
             exhaustion_prob = sent_raw['score'] if sent_raw.get('label') in ['negative', 'LABEL_0'] else 0.0
 
             # Inefficacy (Zero-shot)
             candidate_labels = ["technical block", "stuck", "making progress", "task completed"]
-            zs_res = self.inefficacy_pipe(text, candidate_labels=candidate_labels)
+            zs_res = self.inefficacy_pipe(chunk, candidate_labels=candidate_labels)
             
             inefficacy_prob = 0.0
             if zs_res['labels'][0] in ["technical block", "stuck"]:
                 inefficacy_prob = zs_res['scores'][0]
 
-            e_val = round(float(exhaustion_prob), 2)
-            c_val = round(float(cynicism_prob), 2)
-            i_val = round(float(inefficacy_prob), 2)
-            b_index = round((e_val + c_val + i_val) / 3, 2)
+            e_scores.append(exhaustion_prob)
+            c_scores.append(cynicism_prob)
+            i_scores.append(inefficacy_prob)
 
-            return {
-                "exhaustion": e_val,
-                "cynicism": c_val,
-                "inefficacy": i_val,
-                "burnout_index": b_index
-            }
-        except Exception as e:
-            print(f"INFERENCE ERROR: {e}")
+        if not e_scores: 
             return {"exhaustion": 0.0, "cynicism": 0.0, "inefficacy": 0.0, "burnout_index": 0.0}
+
+        e_val = round(sum(e_scores) / len(e_scores), 2)
+        c_val = round(sum(c_scores) / len(c_scores), 2)
+        i_val = round(sum(i_scores) / len(i_scores), 2)
+        
+        b_index = round((e_val + c_val + i_val) / 3.0, 2)
+
+        return {
+            "exhaustion": e_val,
+            "cynicism": c_val,
+            "inefficacy": i_val,
+            "burnout_index": b_index
+        }

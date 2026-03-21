@@ -58,7 +58,6 @@ class BurnoutService:
 
     # Group unanalyzed messages into sessions, analyze them, and purge text.
     def analyze_data(self):
-        
         unanalyzed_messages = self.message_repo.get_unanalyzed()
         
         if not unanalyzed_messages:
@@ -74,7 +73,12 @@ class BurnoutService:
             
             sid = msg.sessionId
             if sid not in sessions_data:
-                sessions_data[sid] = {"channelId": msg.channelId, "teamId": msg.teamId, "msgs": []}
+                sessions_data[sid] = {
+                    "channelId": msg.channelId, 
+                    "teamId": msg.teamId, 
+                    "channelName": msg.channelName,
+                    "msgs": []
+                }
             
             sessions_data[sid]["msgs"].append(msg)
 
@@ -82,18 +86,29 @@ class BurnoutService:
             msgs = data["msgs"]
             channel_id = data["channelId"]
             team_id = data["teamId"]
+            channel_name = data.get("channelName", "")
             
-            session_text = " ".join([m.content for m in msgs])
+            start_time = msgs[0].timestamp
+            end_time = msgs[-1].timestamp
+            message_count = len(msgs)
+
+            current_text = " ".join([m.content for m in msgs if m.content])
+            session_text = current_text 
+ 
+            is_chat = True 
+            
+            if is_chat:
+                context_msgs = self.message_repo.get_previous_messages(channel_id, start_time, limit=5)
+                if context_msgs:
+                    context_text = " ".join([m.content for m in context_msgs if m.content])
+                    session_text = f"[CONTEXTO PREVIO] {context_text} [SESIÓN ACTUAL] {current_text}"
             
             results = self.predictor.extract_content_features(session_text)
+            
             e_val = results.get("exhaustion", 0.0)
             c_val = results.get("cynicism", 0.0)
             i_val = results.get("inefficacy", 0.0)
             b_index = results.get("burnout_index", 0.0)
-
-            start_time = msgs[0].timestamp
-            end_time = msgs[-1].timestamp
-            message_count = len(msgs)
 
             overtime_f, density_f, latency_f = self.extract_context_features(
                 start_time, end_time, message_count
@@ -128,7 +143,7 @@ class BurnoutService:
             )
             self.burnout_repo.save_session(session)
             
-            msg_ids = [m.externalId for m in msgs]
+            msg_ids = [m.id for m in msgs]
             self.message_repo.mark_as_analyzed(msg_ids)
             print(f"Session {session_id} analyzed and {len(msgs)} messages purged.")
 

@@ -81,7 +81,7 @@ class AzureTeamsProvider(TeamsProvider):
             return None
         
         return Message(
-            externalId=data.get('id'),
+            id=data.get('id'),
             content=clean_text,
             timestamp=data.get('createdDateTime', ""),
             teamId=team_id,
@@ -116,6 +116,10 @@ class AzureTeamsProvider(TeamsProvider):
                     skip += top
 
                 for msg in reversed(raw_messages):
+                    sender_tenant_id = msg.get("from", {}).get("user", {}).get("tenantId")
+                    if sender_tenant_id != self.tenant_id:
+                        continue
+
                     msg_id = msg.get('id')
                     msg_date = msg.get('createdDateTime')
                     
@@ -130,6 +134,10 @@ class AzureTeamsProvider(TeamsProvider):
                     if replies_res.status_code == 200:
                         replies_data = replies_res.json().get('value', [])
                         for reply in reversed(replies_data):
+                            reply_sender_tenant_id = reply.get("from", {}).get("user", {}).get("tenantId")
+                            if reply_sender_tenant_id != self.tenant_id:
+                                continue
+
                             reply_date = reply.get('createdDateTime')
                             if not last_sync or (reply_date and reply_date > last_sync):
                                 mapped_reply = self.map_to_domain_message(reply, team_id, channel_id, parent_id=msg_id)
