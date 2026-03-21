@@ -116,7 +116,10 @@ class AzureTeamsProvider(TeamsProvider):
                     skip += top
 
                 for msg in reversed(raw_messages):
-                    sender_tenant_id = msg.get("from", {}).get("user", {}).get("tenantId")
+                    msg_from = msg.get("from") or {}
+                    msg_user = msg_from.get("user") or {}
+                    sender_tenant_id = msg_user.get("tenantId")
+                    
                     if sender_tenant_id != self.tenant_id:
                         continue
 
@@ -134,7 +137,10 @@ class AzureTeamsProvider(TeamsProvider):
                     if replies_res.status_code == 200:
                         replies_data = replies_res.json().get('value', [])
                         for reply in reversed(replies_data):
-                            reply_sender_tenant_id = reply.get("from", {}).get("user", {}).get("tenantId")
+                            reply_from = reply.get("from") or {}
+                            reply_user = reply_from.get("user") or {}
+                            reply_sender_tenant_id = reply_user.get("tenantId")
+
                             if reply_sender_tenant_id != self.tenant_id:
                                 continue
 
