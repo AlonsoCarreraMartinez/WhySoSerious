@@ -23,11 +23,11 @@ import { api } from "../../lib/api"
 import { Team, Channel, mockCurrentUser } from "../../lib/mock-data"
 
 const CHART_COLORS = [
-  "hsl(0, 84%, 60%)",    
-  "hsl(25, 95%, 53%)",   
-  "hsl(48, 96%, 53%)",   
-  "hsl(200, 70%, 50%)",  
-  "hsl(160, 60%, 45%)",  
+  "hsl(280, 65%, 60%)",  
+  "hsl(210, 80%, 50%)",   
+  "hsl(180, 70%, 45%)",   
+  "hsl(330, 75%, 65%)",   
+  "hsl(240, 60%, 55%)",   
 ]
 
 export function MainDashboard() {

@@ -109,6 +109,11 @@ export function ChannelDetail() {
     fetchData()
   }, [selectedChannelId, navigateToDashboard, startDate, endDate])
 
+  const handleResetDates = () => {
+    setStartDate(undefined)
+    setEndDate(undefined)
+  }
+
   if (!selectedChannelId || selectedChannelId === "undefined") return null
 
   if (isLoading) {
@@ -245,6 +250,11 @@ export function ChannelDetail() {
                           <Calendar mode="single" selected={endDate} onSelect={setEndDate} />
                         </div>
                       </div>
+                      <div className="p-2 border-t flex justify-center bg-muted/20">
+                        <Button variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={handleResetDates}>
+                          Reset Dates
+                        </Button>
+                      </div>
                     </PopoverContent>
                   </Popover>
                 </div>
@@ -322,6 +332,11 @@ export function ChannelDetail() {
                           <Calendar mode="single" selected={endDate} onSelect={setEndDate} />
                         </div>
                       </div>
+                      <div className="p-2 border-t flex justify-center bg-muted/20">
+                        <Button variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={handleResetDates}>
+                          Reset Dates
+                        </Button>
+                      </div>
                     </PopoverContent>
                   </Popover>
                 </div>
@@ -339,9 +354,9 @@ export function ChannelDetail() {
                           <ReferenceLine y={25} yAxisId="left" stroke="hsl(48, 96%, 53%)" strokeDasharray="5 5" label={{ value: "Moderate", position: "right", fill: "hsl(48, 96%, 40%)", fontSize: 11 }} />
                           <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }} />
                           <Legend />
-                          <Line type="monotone" dataKey="exhaustion" stroke="hsl(0, 84%, 60%)" strokeWidth={2} dot={{ r: 4 }} yAxisId="left" />
-                          <Line type="monotone" dataKey="cynicism" stroke="hsl(25, 95%, 53%)" strokeWidth={2} dot={{ r: 4 }} yAxisId="left" />
-                          <Line type="monotone" dataKey="inefficacy" stroke="hsl(200, 70%, 50%)" strokeWidth={2} dot={{ r: 4 }} yAxisId="left" />
+                          <Line type="monotone" dataKey="exhaustion" stroke="hsl(280, 65%, 60%)" strokeWidth={2} dot={{ r: 4 }} yAxisId="left" />
+                          <Line type="monotone" dataKey="cynicism" stroke="hsl(210, 80%, 50%)" strokeWidth={2} dot={{ r: 4 }} yAxisId="left" />
+                          <Line type="monotone" dataKey="inefficacy" stroke="hsl(180, 70%, 45%)" strokeWidth={2} dot={{ r: 4 }} yAxisId="left" />
                         </LineChart>
                       </ResponsiveContainer>
                     </div>
