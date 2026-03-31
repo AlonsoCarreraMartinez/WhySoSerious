@@ -15,6 +15,10 @@ class UserRepository(ABC):
     def get_by_email(self, email: str) -> Optional[User]: 
         pass
 
+    # Fetches multiple users by a list of their IDs or Emails.
+    @abstractmethod
+    def get_by_ids(self, user_ids: List[str]) -> List[User]:
+        pass
 
 class TeamRepository(ABC):
 
@@ -38,6 +42,10 @@ class TeamRepository(ABC):
     def get_all(self) -> List[Team]:
         pass
 
+    # Fetches all teams where a specific email is listed in the managers array.
+    @abstractmethod
+    def get_teams_by_manager(self, manager_email: str) -> List[Team]:
+        pass
 
 class ChannelRepository(ABC):
 
@@ -49,6 +57,16 @@ class ChannelRepository(ABC):
     # Update channel's bert scores.
     @abstractmethod
     def update_burnout_metrics(self, channel_id: str, scores: MBIScores): 
+        pass
+
+    # Fetches all channels stored in the database.
+    @abstractmethod
+    def get_all(self) -> List[Channel]:
+        pass
+
+    # Fetch a single channel by its ID.
+    @abstractmethod
+    def get_by_id(self, channel_id: str) -> Optional[Channel]:
         pass
 
 
@@ -100,6 +118,11 @@ class BurnoutRepository(ABC):
     # Saves a health trend point for historical charts.
     @abstractmethod
     def save_trend(self, trend: HealthTrend): 
+        pass
+
+    # Retrieves historical health trend records for a specific target within a given timeframe.
+    @abstractmethod
+    def get_trends(self, target_id: str, start_date: Optional[str] = None, end_date: Optional[str] = None) -> List[HealthTrend]: 
         pass
 
 

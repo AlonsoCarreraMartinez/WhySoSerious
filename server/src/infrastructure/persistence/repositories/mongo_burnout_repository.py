@@ -1,7 +1,8 @@
-from typing import List
+from typing import List, Optional
 from domain.ports import BurnoutRepository
 from domain.models import ConversationSession, HealthTrend
 from infrastructure.persistence.mongo_client import mongo_client
+from datetime import datetime, timedelta
 
 class MongoBurnoutRepository(BurnoutRepository):
     
@@ -42,3 +43,24 @@ class MongoBurnoutRepository(BurnoutRepository):
     # Saves a health trend point for historical charts.
     def save_trend(self, trend: HealthTrend):
         self.trends_collection.insert_one(trend.model_dump(by_alias=True, exclude_none=True))
+
+    # Retrieves historical health trend records for a specific target within a given timeframe.
+    def get_trends(self, target_id: str, start_date: Optional[str] = None, end_date: Optional[str] = None) -> List[HealthTrend]:
+        query = {"targetId": target_id}
+        
+        if start_date and end_date:
+            query["date"] = {"$gte": start_date, "$lte": end_date}
+        else:
+            date_threshold = datetime.utcnow() - timedelta(days=30)
+            threshold_str = date_threshold.strftime("%Y-%m-%dT%H:%M:%SZ")
+            query["date"] = {"$gte": threshold_str}
+
+        cursor = self.trends_collection.find(query).sort("date", 1)
+        
+        results = []
+        for doc in cursor:
+            if "_id" in doc:
+                doc["_id"] = str(doc["_id"])
+            results.append(HealthTrend(**doc))
+            
+        return results

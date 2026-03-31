@@ -1,35 +1,27 @@
-from fastapi import APIRouter, Header, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from typing import List
-from application.services.auth_service import AuthService
-from infrastructure.api.dependencies import get_auth_service, get_team_repository
+from application.dtos import TeamDashboardResponseDTO
+from infrastructure.api.dependencies import get_team_repository
+from infrastructure.api.mappers import map_team_to_dashboard_dto
 
 router = APIRouter(prefix="/teams", tags=["Teams"])
 
-# Fetches teams based on Azure permissions.
-@router.get("/dashboard")
+@router.get("/dashboard", response_model=List[TeamDashboardResponseDTO])
 async def get_dashboard_data(
-    x_user_email: str = Header(None, alias="X-User-Email"),
-    auth_service: AuthService = Depends(get_auth_service),
     team_repo = Depends(get_team_repository)
 ):
+    db_teams = team_repo.get_all()
+    results = [map_team_to_dashboard_dto(team) for team in db_teams]
+    results.sort(key=lambda x: x.burnoutScore, reverse=True)
+    return results[:5]
 
-    if not x_user_email:
-        raise HTTPException(status_code=401, detail="X-User-Email header missing")
-
-    permissions = auth_service.validate_user_access(x_user_email)
-
-    if not permissions["in_org"]:
-        raise HTTPException(status_code=403, detail="User not in organization")
-
-    if permissions["is_admin"]:
-        return team_repo.get_all()
-
-    if permissions["managed_teams"]:
-        results = []
-        for team_name in permissions["managed_teams"]:
-            team_data = team_repo.get_by_id(team_name)
-            if team_data:
-                results.append(team_data)
-        return results
-
-    return [] 
+@router.get("/{team_name}", response_model=TeamDashboardResponseDTO)
+async def get_team_detail(
+    team_name: str,
+    team_repo = Depends(get_team_repository)
+):
+    team = team_repo.get_by_id(team_name)
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+        
+    return map_team_to_dashboard_dto(team)

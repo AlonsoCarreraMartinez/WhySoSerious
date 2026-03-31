@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from infrastructure.api.routers import teams, burnout, channels 
+from infrastructure.api.routers import teams, burnout, channels, users, auth 
 from infrastructure.external.scheduler.scheduler import TaskScheduler
 from application.services.sync_service import SyncService
 from application.services.burnout_service import BurnoutService
@@ -53,6 +53,8 @@ async def startup_event():
 app.include_router(teams.router, prefix="/api")
 app.include_router(burnout.router, prefix="/api")
 app.include_router(channels.router, prefix="/api")
+app.include_router(users.router, prefix="/api")
+app.include_router(auth.router, prefix="/api")
 
 
 

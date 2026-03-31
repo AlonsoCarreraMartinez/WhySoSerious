@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from domain.ports import UserRepository
 from domain.models import User
 from infrastructure.persistence.mongo_client import mongo_client
@@ -28,3 +28,8 @@ class MongoUserRepository(UserRepository):
             return User(**user_data) # Convert each MongoDB document into a User model object using unpacking (**).
         
         return None
+    
+    # Fetches multiple users by a list of their IDs or Emails.
+    def get_by_ids(self, user_ids: List[str]) -> List[User]:
+        cursor = self.collection.find({"_id": {"$in": user_ids}})
+        return [User(**doc) for doc in cursor]

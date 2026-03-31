@@ -12,7 +12,7 @@ class MongoTeamRepository(TeamRepository):
     # Fetch a single team using its external Microsoft ID.
     def get_by_id(self, team_id: str) -> Optional[Team]:
        
-        team_data = self.collection.find_one({"externalId": team_id})
+        team_data = self.collection.find_one({"_id": team_id})
         
         if team_data:
             return Team(**team_data)
@@ -38,4 +38,11 @@ class MongoTeamRepository(TeamRepository):
     # Fetches all teams stored in the database.
     def get_all(self) -> List[Team]:
         cursor = self.collection.find({})
+        return [Team(**doc) for doc in cursor]
+    
+    # Fetches all teams where a specific email is listed in the managers array.
+    def get_teams_by_manager(self, manager_email: str) -> List[Team]:
+        
+        query = {"managers": {"$regex": f"^{manager_email}$", "$options": "i"}}
+        cursor = self.collection.find(query)
         return [Team(**doc) for doc in cursor]

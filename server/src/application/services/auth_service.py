@@ -66,3 +66,31 @@ class AuthService:
             is_owner=False,
             auth_message="You do not have access to this data."
         )
+    
+    # Temporary bypass method to evaluate user role directly from DB
+    def verify_user_role_bypass(self, email: str) -> AuthStatusDTO:
+        user_email = email.lower().strip()
+        
+        GLOBAL_ADMINS = ["alonso@ww5dl.onmicrosoft.com"] # Temporary list of global administrators (replace with your actual email)
+        
+        is_admin = user_email in GLOBAL_ADMINS
+        
+        managed_teams_docs = self.team_repository.get_teams_by_manager(user_email)
+        managed_teams_names = [team.name for team in managed_teams_docs]
+        
+        is_owner = len(managed_teams_names) > 0
+        
+        if is_admin:
+            auth_message = "Global Administrator"
+        elif is_owner:
+            auth_message = "Team Lead"
+        else:
+            auth_message = "Employee"
+
+        return AuthStatusDTO(
+            in_org=True, 
+            is_admin=is_admin,
+            is_owner=is_owner,
+            managed_teams=managed_teams_names,
+            auth_message=auth_message
+        )
