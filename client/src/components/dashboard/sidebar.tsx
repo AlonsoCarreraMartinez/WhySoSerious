@@ -58,7 +58,7 @@ export function Sidebar() {
 
       <div className="border-t border-sidebar-border p-4">
         <p className="text-xs text-sidebar-foreground/50">
-          Powered by Microsoft Teams Data
+          Powered by HP SCDS
         </p>
       </div>
     </aside>

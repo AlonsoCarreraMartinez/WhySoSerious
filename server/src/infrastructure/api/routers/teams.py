@@ -13,7 +13,7 @@ async def get_dashboard_data(
     db_teams = team_repo.get_all()
     results = [map_team_to_dashboard_dto(team) for team in db_teams]
     results.sort(key=lambda x: x.burnoutScore, reverse=True)
-    return results[:5]
+    return results
 
 @router.get("/{team_name}", response_model=TeamDashboardResponseDTO)
 async def get_team_detail(

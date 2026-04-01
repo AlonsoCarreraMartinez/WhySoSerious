@@ -11,7 +11,7 @@ team_repository = MongoTeamRepository()
 burnout_repository = MongoBurnoutRepository()
 channel_repository = MongoChannelRepository()
 user_repository = MongoUserRepository()
-auth_service = AuthService(azure_provider, team_repository)
+auth_service = AuthService(azure_provider, team_repository, user_repository)
 
 # Returns the AuthService instance to be used by routers.
 def get_auth_service() -> AuthService:

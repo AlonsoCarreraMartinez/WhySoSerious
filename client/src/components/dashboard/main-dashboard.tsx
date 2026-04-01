@@ -20,7 +20,7 @@ import { useDashboard } from "../../lib/dashboard-context"
 import { Search } from "lucide-react"
 
 import { api } from "../../lib/api"
-import { Team, Channel, mockCurrentUser } from "../../lib/mock-data"
+import { Team, Channel } from "../../lib/mock-data"
 
 const CHART_COLORS = [
   "hsl(280, 65%, 60%)",  
@@ -31,7 +31,7 @@ const CHART_COLORS = [
 ]
 
 export function MainDashboard() {
-  const { navigateToTeam, navigateToChannel } = useDashboard()
+  const { navigateToTeam, navigateToChannel, currentUser, userRole } = useDashboard()
   const [teamSearch, setTeamSearch] = useState("")
 
   const [teams, setTeams] = useState<Team[]>([])
@@ -44,33 +44,51 @@ export function MainDashboard() {
       try {
         setIsLoading(true)
 
-        const [fetchedTeams, fetchedChannels] = await Promise.all([
+        let [fetchedTeams, fetchedChannels] = await Promise.all([
           api.getDashboardTeams(),
           api.getDashboardChannels()
         ])
+
+        if (userRole === "manager" && currentUser) {
+          const managedTeamNames = currentUser.managedTeams.map((t: any) => t.name)
+          
+          fetchedTeams = fetchedTeams.filter((team) => managedTeamNames.includes(team.name))
+          
+          // Filtro a prueba de balas: forzamos strings y cruzamos por id, _id o nombre
+          const validTeamIds = fetchedTeams.map((t: any) => String(t.id || t._id))
+          
+          fetchedChannels = fetchedChannels.filter((channel: any) => {
+            const cTeamId = String(channel.teamId || channel.team_id || "")
+            return validTeamIds.includes(cTeamId) || managedTeamNames.includes(cTeamId)
+          })
+        }
 
         setTeams(fetchedTeams)
         setChannels(fetchedChannels)
 
         const top5Teams = fetchedTeams.slice(0, 5)
 
-        const historyPromises = top5Teams.map(t => api.getHistoricalData(t.id))
-        const histories = await Promise.all(historyPromises)
+        if (top5Teams.length > 0) {
+          const historyPromises = top5Teams.map(t => api.getHistoricalData(t.id))
+          const histories = await Promise.all(historyPromises)
 
-        const mergedByDate: Record<string, any> = {}
+          const mergedByDate: Record<string, any> = {}
 
-        histories.forEach((teamHistory, index) => {
-          const teamId = top5Teams[index].id
-          teamHistory.forEach(point => {
-            if (!mergedByDate[point.date]) {
-              mergedByDate[point.date] = { date: point.date }
-            }
-            mergedByDate[point.date][teamId] = point.score
+          histories.forEach((teamHistory, index) => {
+            const teamId = top5Teams[index].id
+            teamHistory.forEach((point: any) => {
+              if (!mergedByDate[point.date]) {
+                mergedByDate[point.date] = { date: point.date }
+              }
+              mergedByDate[point.date][teamId] = point.score
+            })
           })
-        })
 
-        const finalChartData = Object.values(mergedByDate)
-        setChartData(finalChartData)
+          const finalChartData = Object.values(mergedByDate)
+          setChartData(finalChartData)
+        } else {
+          setChartData([])
+        }
 
       } catch (error) {
         console.error("Error fetching dashboard data:", error)
@@ -79,8 +97,10 @@ export function MainDashboard() {
       }
     }
 
-    fetchDashboardData()
-  }, [])
+    if (currentUser) {
+      fetchDashboardData()
+    }
+  }, [currentUser, userRole])
 
   const topTeams = useMemo(() => 
     [...teams].sort((a, b) => b.burnoutScore - a.burnoutScore).slice(0, 5),
@@ -104,7 +124,7 @@ export function MainDashboard() {
     [allTeamsSorted, teamSearch]
   )
 
-  if (isLoading) {
+  if (isLoading || !currentUser) {
     return (
       <div className="flex h-full items-center justify-center p-6 text-muted-foreground">
         Loading data from database...
@@ -117,7 +137,7 @@ export function MainDashboard() {
       <div>
         <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
         <p className="text-muted-foreground">
-          Welcome, <span className="font-medium text-foreground">{mockCurrentUser.name}</span>
+          Welcome, <span className="font-medium text-foreground">{currentUser.name}</span>
         </p>
       </div>
 
@@ -130,18 +150,22 @@ export function MainDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
-            {topTeams.map((team, index) => (
-              <BurnoutCard
-                key={team.id}
-                name={team.name}
-                visibility={team.visibility}
-                memberCount={team.memberCount}
-                burnoutScore={team.burnoutScore}
-                burnoutLevel={team.burnoutLevel}
-                rank={index + 1}
-                onClick={() => navigateToTeam(team.id)}
-              />
-            ))}
+            {topTeams.length > 0 ? (
+              topTeams.map((team, index) => (
+                <BurnoutCard
+                  key={team.id}
+                  name={team.name}
+                  visibility={team.visibility}
+                  memberCount={team.memberCount}
+                  burnoutScore={team.burnoutScore}
+                  burnoutLevel={team.burnoutLevel}
+                  rank={index + 1}
+                  onClick={() => navigateToTeam(team.id)}
+                />
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground">No teams to display.</p>
+            )}
           </CardContent>
         </Card>
 
@@ -153,18 +177,22 @@ export function MainDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
-            {topChannels.map((channel, index) => (
-              <BurnoutCard
-                key={channel.id}
-                name={channel.name}
-                visibility={channel.visibility}
-                memberCount={channel.memberCount}
-                burnoutScore={channel.burnoutScore}
-                burnoutLevel={channel.burnoutLevel}
-                rank={index + 1}
-                onClick={() => navigateToChannel(channel.id)}
-              />
-            ))}
+            {topChannels.length > 0 ? (
+              topChannels.map((channel, index) => (
+                <BurnoutCard
+                  key={channel.id}
+                  name={channel.name}
+                  visibility={channel.visibility}
+                  memberCount={channel.memberCount}
+                  burnoutScore={channel.burnoutScore}
+                  burnoutLevel={channel.burnoutLevel}
+                  rank={index + 1}
+                  onClick={() => navigateToChannel(channel.id)}
+                />
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground">No channels to display.</p>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -183,91 +211,97 @@ export function MainDashboard() {
                 <p className="text-sm text-muted-foreground mb-4">
                   Comparing burnout trends for the highest-risk teams
                 </p>
-                <div className="h-[350px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis
-                        dataKey="date"
-                        tick={{ fontSize: 12 }}
-                        className="text-muted-foreground"
-                      />
-                      <YAxis
-                        domain={[0, 100]}
-                        tick={{ fontSize: 12 }}
-                        className="text-muted-foreground"
-                        yAxisId="left"
-                      />
-                      <YAxis
-                        domain={[0, 100]}
-                        yAxisId="right"
-                        orientation="right"
-                        tick={false}
-                        axisLine={false}
-                      />
-                      <ReferenceLine
-                        y={75}
-                        yAxisId="left"
-                        stroke="hsl(0, 84%, 60%)"
-                        strokeDasharray="5 5"
-                        label={{ value: "Critical", position: "right", fill: "hsl(0, 84%, 60%)", fontSize: 11 }}
-                      />
-                      <ReferenceLine
-                        y={50}
-                        yAxisId="left"
-                        stroke="hsl(25, 95%, 53%)"
-                        strokeDasharray="5 5"
-                        label={{ value: "High", position: "right", fill: "hsl(25, 95%, 53%)", fontSize: 11 }}
-                      />
-                      <ReferenceLine
-                        y={25}
-                        yAxisId="left"
-                        stroke="hsl(48, 96%, 53%)"
-                        strokeDasharray="5 5"
-                        label={{ value: "Moderate", position: "right", fill: "hsl(48, 96%, 40%)", fontSize: 11 }}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--card))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "var(--radius)",
-                        }}
-                        labelStyle={{ color: "hsl(var(--foreground))" }}
-                      />
-                      <Legend />
-                      {topTeams.map((team, index) => (
-                        <Line
-                          key={team.id}
-                          type="monotone"
-                          dataKey={team.id}
-                          stroke={CHART_COLORS[index]}
-                          strokeWidth={2}
-                          dot={{ fill: CHART_COLORS[index], r: 3 }}
-                          name={team.name}
-                          yAxisId="left"
-                        />
-                      ))}
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="mt-4 flex items-center justify-center gap-6 text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="h-3 w-3 rounded-full bg-red-500" />
-                    <span className="text-muted-foreground">Critical (75+)</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-3 w-3 rounded-full bg-orange-500" />
-                    <span className="text-muted-foreground">High (50-74)</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-3 w-3 rounded-full bg-yellow-500" />
-                    <span className="text-muted-foreground">Moderate (25-49)</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-3 w-3 rounded-full bg-green-500" />
-                    <span className="text-muted-foreground">Low (0-24)</span>
-                  </div>
-                </div>
+                {chartData.length > 0 ? (
+                  <>
+                    <div className="h-[350px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                          <XAxis
+                            dataKey="date"
+                            tick={{ fontSize: 12 }}
+                            className="text-muted-foreground"
+                          />
+                          <YAxis
+                            domain={[0, 100]}
+                            tick={{ fontSize: 12 }}
+                            className="text-muted-foreground"
+                            yAxisId="left"
+                          />
+                          <YAxis
+                            domain={[0, 100]}
+                            yAxisId="right"
+                            orientation="right"
+                            tick={false}
+                            axisLine={false}
+                          />
+                          <ReferenceLine
+                            y={75}
+                            yAxisId="left"
+                            stroke="hsl(0, 84%, 60%)"
+                            strokeDasharray="5 5"
+                            label={{ value: "Critical", position: "right", fill: "hsl(0, 84%, 60%)", fontSize: 11 }}
+                          />
+                          <ReferenceLine
+                            y={50}
+                            yAxisId="left"
+                            stroke="hsl(25, 95%, 53%)"
+                            strokeDasharray="5 5"
+                            label={{ value: "High", position: "right", fill: "hsl(25, 95%, 53%)", fontSize: 11 }}
+                          />
+                          <ReferenceLine
+                            y={25}
+                            yAxisId="left"
+                            stroke="hsl(48, 96%, 53%)"
+                            strokeDasharray="5 5"
+                            label={{ value: "Moderate", position: "right", fill: "hsl(48, 96%, 40%)", fontSize: 11 }}
+                          />
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: "hsl(var(--card))",
+                              border: "1px solid hsl(var(--border))",
+                              borderRadius: "var(--radius)",
+                            }}
+                            labelStyle={{ color: "hsl(var(--foreground))" }}
+                          />
+                          <Legend />
+                          {topTeams.map((team, index) => (
+                            <Line
+                              key={team.id}
+                              type="monotone"
+                              dataKey={team.id}
+                              stroke={CHART_COLORS[index % CHART_COLORS.length]}
+                              strokeWidth={2}
+                              dot={{ fill: CHART_COLORS[index % CHART_COLORS.length], r: 3 }}
+                              name={team.name}
+                              yAxisId="left"
+                            />
+                          ))}
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="mt-4 flex items-center justify-center gap-6 text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 rounded-full bg-red-500" />
+                        <span className="text-muted-foreground">Critical (75+)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 rounded-full bg-orange-500" />
+                        <span className="text-muted-foreground">High (50-74)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 rounded-full bg-yellow-500" />
+                        <span className="text-muted-foreground">Moderate (25-49)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 rounded-full bg-green-500" />
+                        <span className="text-muted-foreground">Low (0-24)</span>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="py-8 text-center text-muted-foreground">Not enough data to display trends.</div>
+                )}
               </div>
             </TabsContent>
 

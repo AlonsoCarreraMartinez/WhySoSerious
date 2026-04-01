@@ -1,94 +1,130 @@
 "use client"
 
-import { createContext, useContext, useState, type ReactNode } from "react"
+import React, { createContext, useContext, useState, useEffect, ReactNode } from "react"
+import { app } from "@microsoft/teams-js"
 
-export type UserRole = "admin" | "manager" | "employee"
-export type ViewType = "dashboard" | "team" | "channel"
+type ViewState = "dashboard" | "team" | "channel"
+type UserRole = "admin" | "manager" | "employee" | "none"
 
-interface DashboardState {
-  currentView: ViewType
-  selectedTeamId: string | null
-  selectedChannelId: string | null
-  userRole: UserRole
-  dateRange: "30days" | "custom"
-  customDateStart: string | null
-  customDateEnd: string | null
+interface User {
+  name: string
+  email: string
+  role: string
+  managedTeams: any[]
+  avatar?: string
 }
 
-interface DashboardContextType extends DashboardState {
+interface DashboardContextType {
+  currentView: ViewState
+  userRole: UserRole
+  currentUser: User | null
+  isCheckingAuth: boolean
+  inOrg: boolean
+  authMessage: string
+  selectedTeamId: string | null
+  selectedChannelId: string | null
   navigateToDashboard: () => void
   navigateToTeam: (teamId: string) => void
   navigateToChannel: (channelId: string) => void
-  setUserRole: (role: UserRole) => void
-  setDateRange: (range: "30days" | "custom") => void
-  setCustomDates: (start: string, end: string) => void
 }
 
-const DashboardContext = createContext<DashboardContextType | null>(null)
+const DashboardContext = createContext<DashboardContextType | undefined>(undefined)
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<DashboardState>({
-    currentView: "dashboard",
-    selectedTeamId: null,
-    selectedChannelId: null,
-    userRole: "admin",
-    dateRange: "30days",
-    customDateStart: null,
-    customDateEnd: null,
-  })
+  const [currentView, setCurrentView] = useState<ViewState>("dashboard")
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null)
+  const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null)
 
-  const navigateToDashboard = () => {
-    setState((prev) => ({
-      ...prev,
-      currentView: "dashboard",
-      selectedTeamId: null,
-      selectedChannelId: null,
-    }))
-  }
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
+  const [userRole, setUserRole] = useState<UserRole>("none")
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [inOrg, setInOrg] = useState(false)
+  const [authMessage, setAuthMessage] = useState("")
 
+  useEffect(() => {
+    const initTeamsAndAuth = async () => {
+      let userEmail = ""
+      let userName = ""
+
+      try {
+        await app.initialize()
+        const context = await app.getContext()
+        userEmail = context.user?.userPrincipalName || context.user?.loginHint || ""
+        userName = context.user?.userDisplayName || userEmail.split("@")[0]
+
+        if (!userEmail) throw new Error("Could not get user email from Teams")
+
+      } catch (error) {
+        if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+          // Bypass con Alonso
+          userEmail = "alonso@ww5dl.onmicrosoft.com" 
+          userName = "Alonso"
+        } else {
+          setInOrg(false)
+          setAuthMessage("Security block: You must open this dashboard inside Microsoft Teams.")
+          setIsCheckingAuth(false)
+          return
+        }
+      }
+
+      try {
+        const response = await fetch("http://localhost:8000/api/auth/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: userEmail })
+        })
+
+        if (!response.ok) throw new Error("Backend verification failed")
+
+        const authData = await response.json()
+
+        setInOrg(authData.in_org)
+        setAuthMessage(authData.auth_message)
+
+        if (authData.in_org) {
+          let computedRole: UserRole = "employee"
+
+          if (authData.is_admin) {
+            computedRole = "admin"
+          } else if (authData.is_owner || (authData.managed_teams && authData.managed_teams.length > 0)) {
+            computedRole = "manager"
+          }
+
+          setUserRole(computedRole)
+          setCurrentUser({
+            name: userName,
+            email: userEmail,
+            role: authData.db_role || "Employee", // Lee el rol real
+            managedTeams: authData.managed_teams || [], // Lee los equipos con su visibilidad
+            avatar: "" 
+          })
+        }
+      } catch (error) {
+        setInOrg(false)
+        setAuthMessage("Could not connect to the authentication server.")
+      } finally {
+        setIsCheckingAuth(false)
+      }
+    }
+
+    initTeamsAndAuth()
+  }, [])
+
+  const navigateToDashboard = () => setCurrentView("dashboard")
   const navigateToTeam = (teamId: string) => {
-    setState((prev) => ({
-      ...prev,
-      currentView: "team",
-      selectedTeamId: teamId,
-      selectedChannelId: null,
-    }))
+    setSelectedTeamId(teamId)
+    setCurrentView("team")
   }
-
   const navigateToChannel = (channelId: string) => {
-    setState((prev) => ({
-      ...prev,
-      currentView: "channel",
-      selectedChannelId: channelId,
-    }))
-  }
-
-  const setUserRole = (role: UserRole) => {
-    setState((prev) => ({ ...prev, userRole: role }))
-  }
-
-  const setDateRange = (range: "30days" | "custom") => {
-    setState((prev) => ({ ...prev, dateRange: range }))
-  }
-
-  const setCustomDates = (start: string, end: string) => {
-    setState((prev) => ({
-      ...prev,
-      customDateStart: start,
-      customDateEnd: end,
-    }))
+    setSelectedChannelId(channelId)
+    setCurrentView("channel")
   }
 
   return (
     <DashboardContext.Provider
       value={{
-        ...state,
-        navigateToDashboard,
-        navigateToTeam,
-        navigateToChannel,
-        setUserRole,
-        setDateRange,
-        setCustomDates,
+        currentView, userRole, currentUser, isCheckingAuth, inOrg, authMessage,
+        selectedTeamId, selectedChannelId, navigateToDashboard, navigateToTeam, navigateToChannel,
       }}
     >
       {children}
@@ -98,7 +134,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
 export function useDashboard() {
   const context = useContext(DashboardContext)
-  if (!context) {
+  if (context === undefined) {
     throw new Error("useDashboard must be used within a DashboardProvider")
   }
   return context

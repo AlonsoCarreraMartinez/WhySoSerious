@@ -10,5 +10,4 @@ async def verify_user_role(
     request: LoginRequestDTO,
     auth_service: AuthService = Depends(get_auth_service)
 ):
-    
-    return auth_service.verify_user_role_bypass(request.email)
+    return auth_service.validate_user_access(request.email)

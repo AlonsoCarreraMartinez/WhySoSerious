@@ -13,7 +13,7 @@ async def get_dashboard_channels(
     db_channels = channel_repo.get_all()
     results = [map_channel_to_dashboard_dto(channel) for channel in db_channels]
     results.sort(key=lambda x: x.burnoutScore, reverse=True)
-    return results[:5]
+    return results
 
 @router.get("/team/{team_name}", response_model=List[ChannelDashboardResponseDTO])
 async def get_team_channels(

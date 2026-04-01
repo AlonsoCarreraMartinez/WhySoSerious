@@ -1,12 +1,13 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 class AuthStatusDTO(BaseModel):
     in_org: bool
     is_admin: bool
     is_owner: bool
-    managed_teams: List[str] = []  
+    managed_teams: List[Dict[str, Any]] = []  
     auth_message: Optional[str] = None  
+    db_role: Optional[str] = None  
 
 class LoginRequestDTO(BaseModel):
     email: str

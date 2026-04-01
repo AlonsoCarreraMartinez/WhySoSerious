@@ -1,6 +1,6 @@
 "use client"
 
-import { Bell, ChevronDown, LogOut, Globe, Eye, EyeOff, HelpCircle } from "lucide-react"
+import { Bell, ChevronDown, Globe, Eye, EyeOff, Info } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
@@ -26,15 +26,18 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { mockNotifications, mockCurrentUser, type Visibility } from "@/lib/mock-data"
+import { mockNotifications, type Visibility } from "@/lib/mock-data"
+import { useDashboard } from "@/lib/dashboard-context"
 
-function getVisibilityIcon(visibility: Visibility) {
+function getVisibilityIcon(visibility: Visibility | string) {
   switch (visibility) {
     case "org-wide":
       return Globe
     case "public":
       return Eye
     case "private":
+      return EyeOff
+    default:
       return EyeOff
   }
 }
@@ -43,10 +46,16 @@ export function Header() {
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const unreadCount = mockNotifications.filter((n) => !n.read).length
 
-  const initials = mockCurrentUser.name
+  // Extraemos el usuario real validado por Microsoft Teams
+  const { currentUser } = useDashboard()
+
+  if (!currentUser) return null
+
+  const initials = currentUser.name
     .split(" ")
     .map((n) => n[0])
     .join("")
+    .toUpperCase()
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6" role="banner">
@@ -57,12 +66,59 @@ export function Header() {
           className="h-10 w-auto"
         />
         <div className="flex flex-col">
-          <span className="text-lg font-semibold text-foreground">whysoserious</span>
+          <span className="text-lg font-semibold text-foreground">WhySoSerious</span>
           <span className="text-xs text-muted-foreground">HR Burnout Detection</span>
         </div>
       </div>
 
       <div className="flex items-center gap-4">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary">
+              <Info className="h-5 w-5" />
+              <span className="sr-only">MBI Information</span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80 p-4" align="end">
+            <div className="space-y-3">
+              <h4 className="font-semibold text-sm">Maslach Burnout Inventory (MBI)</h4>
+              <p className="text-xs text-muted-foreground">
+                Our AI maps communication patterns to MBI dimensions (Exhaustion, Cynicism, Inefficacy).
+              </p>
+              <div className="grid gap-2 text-xs">
+                <div className="flex items-start gap-2">
+                  <div className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-red-500" />
+                  <div>
+                    <span className="font-semibold text-foreground">Critical (75-100)</span>
+                    <p className="text-muted-foreground">Severe burnout risk. Immediate intervention required.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-orange-500" />
+                  <div>
+                    <span className="font-semibold text-foreground">High (50-74)</span>
+                    <p className="text-muted-foreground">Significant risk. Preventive measures recommended.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-yellow-500" />
+                  <div>
+                    <span className="font-semibold text-foreground">Moderate (25-49)</span>
+                    <p className="text-muted-foreground">Early signs. Monitor team workload and engagement.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-green-500" />
+                  <div>
+                    <span className="font-semibold text-foreground">Low (0-24)</span>
+                    <p className="text-muted-foreground">Healthy levels. Normal stress, engaged and effective.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+
         <Button
           variant="ghost"
           size="icon"
@@ -87,29 +143,29 @@ export function Header() {
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-primary text-primary-foreground">{initials}</AvatarFallback>
               </Avatar>
-              <span className="hidden md:inline-block">{mockCurrentUser.name}</span>
+              <span className="hidden md:inline-block">{currentUser.name}</span>
               <ChevronDown className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64">
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col gap-1">
-                <p className="text-sm font-medium">{mockCurrentUser.name}</p>
-                <p className="text-xs text-muted-foreground">{mockCurrentUser.email}</p>
+                <p className="text-sm font-medium">{currentUser.name}</p>
+                <p className="text-xs text-muted-foreground">{currentUser.email}</p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <div className="px-2 py-2">
               <p className="text-xs font-medium text-muted-foreground mb-1">Role</p>
               <Badge variant="secondary" className="font-medium">
-                {mockCurrentUser.role}
+                {currentUser.role}
               </Badge>
             </div>
             <DropdownMenuSeparator />
             <div className="px-2 py-2">
               <p className="text-xs font-medium text-muted-foreground mb-2">Managed Teams</p>
               <div className="flex flex-wrap gap-1">
-                {mockCurrentUser.managedTeams.map((team) => {
+                {currentUser.managedTeams.map((team: any) => {
                   const Icon = getVisibilityIcon(team.visibility)
                   return (
                     <Badge key={team.name} variant="outline" className="text-xs flex items-center gap-1">
@@ -118,13 +174,11 @@ export function Header() {
                     </Badge>
                   )
                 })}
+                {currentUser.managedTeams.length === 0 && (
+                  <span className="text-xs text-muted-foreground">No assigned teams</span>
+                )}
               </div>
             </div>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive cursor-pointer">
-              <LogOut className="mr-2 h-4 w-4" />
-              Log Out
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
