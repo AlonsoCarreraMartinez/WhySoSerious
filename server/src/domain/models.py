@@ -70,3 +70,11 @@ class HealthTrend(BaseModel):
     date: str      
     score: MBIScores
     type: str
+
+class Notification(BaseModel):
+    id: str = Field(alias="_id")
+    title: str
+    message: str
+    date: str
+    target_team: Optional[str] = None
+    read_by: List[str] = []

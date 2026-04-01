@@ -2,7 +2,7 @@ import uuid
 from typing import List, Dict
 from datetime import datetime
 from domain.models import MBIScores, Message, ConversationSession
-from domain.ports import MessageRepository, TeamRepository, ChannelRepository, BurnoutRepository, HealthTrend
+from domain.ports import MessageRepository, TeamRepository, ChannelRepository, BurnoutRepository, HealthTrend, NotificationObserver
 from src.infrastructure.ml.bert_inference import BertPredictor
 
 class BurnoutService:
@@ -22,6 +22,11 @@ class BurnoutService:
         self.channel_repo = channel_repo
         self.burnout_repo = burnout_repo
         self.predictor = BertPredictor()
+        self.observers: List[NotificationObserver] = []
+
+    # Adds an observer to listen for burnout alerts.
+    def add_observer(self, observer: NotificationObserver):
+        self.observers.append(observer)
 
     # Calculates Overtime, Density, and Latency based on session timestamps.
     def extract_context_features(self, start_time_str: str, end_time_str: str, message_count: int):
@@ -156,6 +161,8 @@ class BurnoutService:
         teams = self.team_repo.get_all()
 
         for team in teams:
+            was_critical_team = team.burnout_mean.burnout_index >= 0.75 if team.burnout_mean else False
+            
             channels = self.channel_repo.get_by_team(team.name) 
             if not channels:
                 continue
@@ -164,6 +171,8 @@ class BurnoutService:
             team_session_count = 0
 
             for channel in channels:
+                was_critical_chan = channel.burnout_mean.burnout_index >= 0.75 if channel.burnout_mean else False
+                
                 sessions = self.burnout_repo.get_sessions_by_channel(channel.id)
                 if not sessions:
                     continue
@@ -192,6 +201,11 @@ class BurnoutService:
                     self.channel_repo.update_burnout_metrics(channel.id, mean_chan)
                     print(f"  > Metrics updated for Channel: '{channel.name}'")
 
+                    is_critical_chan = mean_chan.burnout_index >= 0.75
+                    if is_critical_chan and not was_critical_chan:
+                        for obs in self.observers:
+                            obs.on_critical_burnout(channel.name, team.name, mean_chan.burnout_index, True)
+
                     chan_trend = HealthTrend(
                         targetId=channel.id,
                         date=datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -218,6 +232,11 @@ class BurnoutService:
                 
                 self.team_repo.update_burnout_metrics(team.name, mean_team)
                 print(f"Metrics updated for Team: {team.name}")
+
+                is_critical_team = mean_team.burnout_index >= 0.75
+                if is_critical_team and not was_critical_team:
+                    for obs in self.observers:
+                        obs.on_critical_burnout(team.name, team.name, mean_team.burnout_index, False)
 
                 team_trend = HealthTrend(
                     targetId=team.name,

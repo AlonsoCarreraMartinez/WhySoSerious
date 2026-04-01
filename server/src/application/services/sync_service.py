@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 import uuid
 from typing import List
-from domain.ports import MessageRepository, TeamsProvider, BurnoutRepository
+from domain.ports import MessageRepository, TeamsProvider, BurnoutRepository, NotificationObserver
 from domain.models import ConversationSession, Message
 
 class SyncService:
@@ -12,11 +12,17 @@ class SyncService:
         self.teams_provider = teams_provider
         self.burnout_repo = burnout_repo
         self.target_teams = ["León", "Oviedo", "La Bañeza"]
+        self.observers: List[NotificationObserver] = []
+
+    # Adds an observer to listen for sync events.
+    def add_observer(self, observer: NotificationObserver):
+        self.observers.append(observer)
 
     # Syncs messages and handles session grouping logic.
     def sync_messages(self):
         print("Starting synchronization.")
         teams = self.teams_provider.get_all_teams()
+        total_new_messages = 0
 
         if teams is None:
             return
@@ -43,6 +49,8 @@ class SyncService:
                 if not new_messages:
                     continue
                 
+                total_new_messages += len(new_messages)
+                
                 for msg in new_messages:
                     msg.teamName = team_name
                     msg.channelName = channel_name
@@ -50,6 +58,10 @@ class SyncService:
                     self.assign_session(msg, team['id'], channel['id'])
                     
                     self.message_repo.save(msg)
+
+        # Notify observers when sync is fully completed.
+        for obs in self.observers:
+            obs.on_sync_completed(total_new_messages)
 
         print("\nSynchronization completed.")
 
@@ -79,4 +91,3 @@ class SyncService:
                         msg.sessionId = new_session_id
             else:
                 msg.sessionId = new_session_id
-        

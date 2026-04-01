@@ -27,7 +27,9 @@ def run_sync():
     from infrastructure.persistence.repositories.mongo_team_repository import MongoTeamRepository
     from infrastructure.persistence.repositories.mongo_channel_repository import MongoChannelRepository
     from infrastructure.persistence.repositories.mongo_burnout_repository import MongoBurnoutRepository
+    from infrastructure.persistence.repositories.mongo_notification_repository import MongoNotificationRepository
     from infrastructure.external.azure.azure_teams_provider import AzureTeamsProvider
+    from infrastructure.external.notifications.mongo_notification_observer import MongoNotificationObserver
     from application.services.sync_service import SyncService
     from application.services.burnout_service import BurnoutService
     
@@ -37,10 +39,15 @@ def run_sync():
         team_repo = MongoTeamRepository()
         channel_repo = MongoChannelRepository()
         burnout_repo = MongoBurnoutRepository()
+        notification_repo = MongoNotificationRepository()
         azure_provider = AzureTeamsProvider()
 
         sync_service = SyncService(message_repo, azure_provider, burnout_repo)
         burnout_service = BurnoutService(message_repo, team_repo, channel_repo, burnout_repo)
+        
+        notification_observer = MongoNotificationObserver(notification_repo)
+        sync_service.add_observer(notification_observer)
+        burnout_service.add_observer(notification_observer)
         
         sync_service.sync_messages()
         burnout_service.analyze_data()

@@ -3,6 +3,7 @@ from infrastructure.persistence.repositories.mongo_team_repository import MongoT
 from infrastructure.persistence.repositories.mongo_burnout_repository import MongoBurnoutRepository
 from infrastructure.persistence.repositories.mongo_channel_repository import MongoChannelRepository
 from infrastructure.persistence.repositories.mongo_user_repository import MongoUserRepository
+from infrastructure.persistence.repositories.mongo_notification_repository import MongoNotificationRepository
 from application.services.auth_service import AuthService
 
 # Singleton instances.
@@ -11,6 +12,7 @@ team_repository = MongoTeamRepository()
 burnout_repository = MongoBurnoutRepository()
 channel_repository = MongoChannelRepository()
 user_repository = MongoUserRepository()
+notification_repository = MongoNotificationRepository()
 auth_service = AuthService(azure_provider, team_repository, user_repository)
 
 # Returns the AuthService instance to be used by routers.
@@ -32,3 +34,7 @@ def get_channel_repository() -> MongoChannelRepository:
 # Returns the UserRepository instance to be used by routers.
 def get_user_repository() -> MongoUserRepository:
     return user_repository
+
+# Returns the NotificationRepository instance to be used by routers.
+def get_notification_repository() -> MongoNotificationRepository:
+    return notification_repository

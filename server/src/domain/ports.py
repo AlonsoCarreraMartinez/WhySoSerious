@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Optional, List
-from .models import User, Team, Channel, Message, MBIScores, ConversationSession, HealthTrend
+from .models import User, Team, Channel, Message, MBIScores, ConversationSession, HealthTrend, Notification
 
 
 class UserRepository(ABC):
@@ -123,6 +123,37 @@ class BurnoutRepository(ABC):
     # Retrieves historical health trend records for a specific target within a given timeframe.
     @abstractmethod
     def get_trends(self, target_id: str, start_date: Optional[str] = None, end_date: Optional[str] = None) -> List[HealthTrend]: 
+        pass
+
+
+class NotificationRepository(ABC):
+
+    # Saves a notification to the database.
+    @abstractmethod
+    def save(self, notification: Notification): 
+        pass
+
+    # Retrieves notifications applicable to a specific user based on their roles.
+    @abstractmethod
+    def get_for_user(self, is_admin: bool, managed_teams: List[str]) -> List[Notification]: 
+        pass
+
+    # Marks a notification as read for a specific user email.
+    @abstractmethod
+    def mark_as_read(self, notification_id: str, email: str): 
+        pass
+
+
+class NotificationObserver(ABC):
+
+    # Notifies when the synchronization process finishes.
+    @abstractmethod
+    def on_sync_completed(self, message_count: int): 
+        pass
+
+    # Notifies when a team or channel crosses the critical burnout threshold.
+    @abstractmethod
+    def on_critical_burnout(self, target_name: str, parent_team: str, score: float, is_channel: bool): 
         pass
 
 

@@ -47,3 +47,14 @@ class MemberResponseDTO(BaseModel):
     name: str
     email: str
     role: str
+
+class NotificationResponseDTO(BaseModel):
+    id: str
+    title: str
+    message: str
+    date: str
+    targetTeam: Optional[str]
+    isRead: bool
+
+class MarkReadRequestDTO(BaseModel):
+    email: str
