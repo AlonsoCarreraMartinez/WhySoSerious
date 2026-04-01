@@ -50,9 +50,16 @@ export function Header() {
 
   useEffect(() => {
     if (currentUser?.email) {
-      api.getNotifications(currentUser.email)
-        .then(setNotifications)
-        .catch(console.error)
+      const fetchNotifs = () => {
+        api.getNotifications(currentUser.email)
+          .then(setNotifications)
+          .catch(console.error)
+      }
+
+      fetchNotifs()
+      const intervalId = setInterval(fetchNotifs, 300000)
+
+      return () => clearInterval(intervalId)
     }
   }, [currentUser])
 

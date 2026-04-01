@@ -59,7 +59,6 @@ export function ChannelDetail() {
       try {
         const isNewChannel = loadedChannelId.current !== selectedChannelId
         if (isNewChannel) {
-          setIsLoading(true)
           loadedChannelId.current = selectedChannelId
         }
 
@@ -87,7 +86,15 @@ export function ChannelDetail() {
 
           setDimensionHistory(formattedHistory)
         } else {
-          const fetchedHistory = await api.getHistoricalData(selectedChannelId, startStr, endStr).catch(() => [])
+          const [fetchedChannel, fetchedMembers, fetchedHistory] = await Promise.all([
+            api.getChannelDetail(selectedChannelId).catch(() => channel),
+            api.getChannelMembers(selectedChannelId).catch(() => members),
+            api.getHistoricalData(selectedChannelId, startStr, endStr).catch(() => [])
+          ])
+
+          if (fetchedChannel) setChannel(fetchedChannel)
+          setMembers(fetchedMembers)
+
           const formattedHistory = (fetchedHistory || []).map((point: any) => ({
             date: point.date,
             exhaustion: point.exhaustion || 0,
@@ -106,7 +113,15 @@ export function ChannelDetail() {
       }
     }
 
-    fetchData()
+    if (selectedChannelId && selectedChannelId !== "undefined") {
+      if (loadedChannelId.current !== selectedChannelId) {
+        setIsLoading(true)
+      }
+      fetchData()
+      
+      const intervalId = setInterval(fetchData, 300000)
+      return () => clearInterval(intervalId)
+    }
   }, [selectedChannelId, navigateToDashboard, startDate, endDate])
 
   const handleResetDates = () => {

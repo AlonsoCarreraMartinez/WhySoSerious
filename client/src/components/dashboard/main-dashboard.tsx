@@ -42,8 +42,6 @@ export function MainDashboard() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        setIsLoading(true)
-
         let [fetchedTeams, fetchedChannels] = await Promise.all([
           api.getDashboardTeams(),
           api.getDashboardChannels()
@@ -54,7 +52,6 @@ export function MainDashboard() {
           
           fetchedTeams = fetchedTeams.filter((team) => managedTeamNames.includes(team.name))
           
-          // Filtro a prueba de balas: forzamos strings y cruzamos por id, _id o nombre
           const validTeamIds = fetchedTeams.map((t: any) => String(t.id || t._id))
           
           fetchedChannels = fetchedChannels.filter((channel: any) => {
@@ -98,7 +95,11 @@ export function MainDashboard() {
     }
 
     if (currentUser) {
+      setIsLoading(true)
       fetchDashboardData()
+      
+      const intervalId = setInterval(fetchDashboardData, 300000)
+      return () => clearInterval(intervalId)
     }
   }, [currentUser, userRole])
 

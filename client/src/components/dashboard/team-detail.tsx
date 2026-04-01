@@ -54,7 +54,6 @@ export function TeamDetail() {
       try {
         const isNewTeam = loadedTeamId.current !== selectedTeamId
         if (isNewTeam) {
-          setIsLoading(true)
           loadedTeamId.current = selectedTeamId
         }
 
@@ -84,7 +83,17 @@ export function TeamDetail() {
 
           setDimensionHistory(formattedHistory)
         } else {
-          const fetchedHistory = await api.getHistoricalData(selectedTeamId, startStr, endStr).catch(() => [])
+          const [fetchedTeam, fetchedChannels, fetchedMembers, fetchedHistory] = await Promise.all([
+            api.getTeamDetail(selectedTeamId).catch(() => team),
+            api.getTeamChannels(selectedTeamId).catch(() => channels),
+            api.getTeamMembers(selectedTeamId).catch(() => members),
+            api.getHistoricalData(selectedTeamId, startStr, endStr).catch(() => [])
+          ])
+
+          if (fetchedTeam) setTeam(fetchedTeam)
+          setChannels(fetchedChannels)
+          setMembers(fetchedMembers)
+
           const formattedHistory = (fetchedHistory || []).map((point: any) => ({
             date: point.date,
             exhaustion: point.exhaustion || 0,
@@ -103,7 +112,15 @@ export function TeamDetail() {
       }
     }
 
-    fetchData()
+    if (selectedTeamId && selectedTeamId !== "undefined") {
+      if (loadedTeamId.current !== selectedTeamId) {
+        setIsLoading(true)
+      }
+      fetchData()
+      
+      const intervalId = setInterval(fetchData, 300000)
+      return () => clearInterval(intervalId)
+    }
   }, [selectedTeamId, navigateToDashboard, startDate, endDate])
 
   const handleResetDates = () => {
