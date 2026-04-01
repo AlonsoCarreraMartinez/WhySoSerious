@@ -2,6 +2,15 @@ import { Team, Channel, Member, HistoricalDataPoint } from "./mock-data"
 
 const API_BASE = `${(import.meta as any).env.VITE_API_URL}/api`
 
+export interface AppNotification {
+  id: string;
+  title: string;
+  message: string;
+  date: string;
+  targetTeam: string | null;
+  isRead: boolean;
+}
+
 export const api = {
   
   getDashboardTeams: async (): Promise<Team[]> => {
@@ -56,5 +65,20 @@ export const api = {
     const res = await fetch(`${API_BASE}/users/channel/${encodeURIComponent(channelId)}`)
     if (!res.ok) throw new Error("Failed to fetch channel members")
     return res.json()
+  },
+
+  getNotifications: async (email: string): Promise<AppNotification[]> => {
+    const res = await fetch(`${API_BASE}/notifications/${encodeURIComponent(email)}`)
+    if (!res.ok) throw new Error("Failed to fetch notifications")
+    return res.json()
+  },
+
+  markNotificationAsRead: async (notificationId: string, email: string): Promise<void> => {
+    const res = await fetch(`${API_BASE}/notifications/${encodeURIComponent(notificationId)}/read`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    })
+    if (!res.ok) throw new Error("Failed to mark notification as read")
   }
 }

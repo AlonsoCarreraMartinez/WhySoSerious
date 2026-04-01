@@ -1,12 +1,11 @@
 "use client"
 
 import { Bell, ChevronDown, Globe, Eye, EyeOff, Info } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   DropdownMenuLabel,
@@ -26,8 +25,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { mockNotifications, type Visibility } from "@/lib/mock-data"
+import { type Visibility } from "@/lib/mock-data"
 import { useDashboard } from "@/lib/dashboard-context"
+import { api, type AppNotification } from "@/lib/api"
 
 function getVisibilityIcon(visibility: Visibility | string) {
   switch (visibility) {
@@ -44,12 +44,33 @@ function getVisibilityIcon(visibility: Visibility | string) {
 
 export function Header() {
   const [notificationsOpen, setNotificationsOpen] = useState(false)
-  const unreadCount = mockNotifications.filter((n) => !n.read).length
-
-  // Extraemos el usuario real validado por Microsoft Teams
+  const [notifications, setNotifications] = useState<AppNotification[]>([])
+  
   const { currentUser } = useDashboard()
 
+  useEffect(() => {
+    if (currentUser?.email) {
+      api.getNotifications(currentUser.email)
+        .then(setNotifications)
+        .catch(console.error)
+    }
+  }, [currentUser])
+
   if (!currentUser) return null
+
+  const unreadCount = notifications.filter((n) => !n.isRead).length
+
+  const handleOpenChange = (open: boolean) => {
+    setNotificationsOpen(open)
+    if (open && unreadCount > 0) {
+      const unread = notifications.filter(n => !n.isRead)
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
+      
+      unread.forEach(n => {
+        api.markNotificationAsRead(n.id, currentUser.email).catch(console.error)
+      })
+    }
+  }
 
   const initials = currentUser.name
     .split(" ")
@@ -123,7 +144,7 @@ export function Header() {
           variant="ghost"
           size="icon"
           className="relative"
-          onClick={() => setNotificationsOpen(true)}
+          onClick={() => handleOpenChange(true)}
           aria-label={`Notifications, ${unreadCount} unread`}
         >
           <Bell className="h-5 w-5" />
@@ -183,7 +204,7 @@ export function Header() {
         </DropdownMenu>
       </div>
 
-      <Dialog open={notificationsOpen} onOpenChange={setNotificationsOpen}>
+      <Dialog open={notificationsOpen} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Notifications</DialogTitle>
@@ -193,25 +214,31 @@ export function Header() {
           </DialogHeader>
           <ScrollArea className="max-h-80">
             <div className="flex flex-col gap-3 pr-4">
-              {mockNotifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className={`rounded-lg border p-3 ${
-                    notification.read ? "bg-background" : "bg-primary/5 border-primary/20"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-medium text-sm">{notification.title}</p>
-                      <p className="text-sm text-muted-foreground">{notification.message}</p>
+              {notifications.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">No new notifications</p>
+              ) : (
+                notifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    className={`rounded-lg border p-3 ${
+                      notification.isRead ? "bg-background" : "bg-primary/5 border-primary/20"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-medium text-sm">{notification.title}</p>
+                        <p className="text-sm text-muted-foreground">{notification.message}</p>
+                      </div>
+                      {!notification.isRead && (
+                        <div className="h-2 w-2 rounded-full bg-primary shrink-0 mt-1.5" />
+                      )}
                     </div>
-                    {!notification.read && (
-                      <div className="h-2 w-2 rounded-full bg-primary shrink-0 mt-1.5" />
-                    )}
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {new Date(notification.date).toLocaleString()}
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-2">{notification.timestamp}</p>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </ScrollArea>
         </DialogContent>
