@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from typing import List
 from application.dtos import NotificationResponseDTO, MarkReadRequestDTO
 from infrastructure.api.dependencies import get_notification_repository, get_user_repository, get_team_repository
+from infrastructure.api.security import get_current_user
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
 
@@ -10,8 +11,12 @@ async def get_user_notifications(
     email: str,
     notification_repo = Depends(get_notification_repository),
     user_repo = Depends(get_user_repository),
-    team_repo = Depends(get_team_repository)
+    team_repo = Depends(get_team_repository),
+    current_user: dict = Depends(get_current_user)
 ):
+    if not current_user.get("is_admin") and current_user.get("email") != email:
+        raise HTTPException(status_code=403, detail="Unauthorized access")
+
     db_user = user_repo.get_by_email(email)
     is_admin = db_user.role == "admin" if db_user else False
     
@@ -36,7 +41,11 @@ async def get_user_notifications(
 async def mark_notification_read(
     notification_id: str,
     request: MarkReadRequestDTO,
-    notification_repo = Depends(get_notification_repository)
+    notification_repo = Depends(get_notification_repository),
+    current_user: dict = Depends(get_current_user)
 ):
+    if not current_user.get("is_admin") and current_user.get("email") != request.email:
+        raise HTTPException(status_code=403, detail="Unauthorized access")
+
     notification_repo.mark_as_read(notification_id, request.email)
     return {"status": "success"}

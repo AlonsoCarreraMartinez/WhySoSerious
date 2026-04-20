@@ -7,7 +7,8 @@ class AuthStatusDTO(BaseModel):
     is_owner: bool
     managed_teams: List[Dict[str, Any]] = []  
     auth_message: Optional[str] = None  
-    db_role: Optional[str] = None  
+    db_role: Optional[str] = None 
+    token: Optional[str] = None 
 
 class LoginRequestDTO(BaseModel):
     email: str

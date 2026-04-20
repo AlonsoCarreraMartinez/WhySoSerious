@@ -1,126 +1,95 @@
 import os
-import torch
-import numpy as np
 from transformers import pipeline
 
 class BertPredictor:
-    def __init__(self, model_dir="models/hf_bert_reg"):
-        """
-        Initializes the 3 specialist pipelines from the local directory.
-        """
-        print(f"--- LOADING MODELS FROM: {model_dir} ---")
+    def __init__(self):
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        model_dir = os.path.join(current_dir, '..', 'weights', 'models', 'hf_bert_reg')
+        
         try:
-            # TOXICITY
-            toxic_path = os.path.join(model_dir, "toxicity")
-            self.toxic_pipe = pipeline("text-classification", model=toxic_path, tokenizer=toxic_path, top_k=None)
+            cynicism_path = os.path.join(model_dir, "cynicism")
+            self.cynicism_pipe = pipeline("text-classification", model=cynicism_path, tokenizer=cynicism_path)
 
-            # SARCASM
-            sarcasm_path = os.path.join(model_dir, "sarcasm")
-            self.sarcasm_pipe = pipeline("text-classification", model=sarcasm_path, tokenizer=sarcasm_path, top_k=None)
+            exhaustion_path = os.path.join(model_dir, "exhaustion")
+            self.exhaustion_pipe = pipeline("sentiment-analysis", model=exhaustion_path, tokenizer=exhaustion_path)
 
-            # POLITENESS 
-            politeness_path = os.path.join(model_dir, "politeness")
-            self.sentiment_pipe = pipeline("sentiment-analysis", model=politeness_path, tokenizer=politeness_path, top_k=None)
-            
-            print("--- MODELS LOADED SUCCESSFULLY ---")
+            inefficacy_path = os.path.join(model_dir, "inefficacy")
+            self.inefficacy_pipe = pipeline("zero-shot-classification", model=inefficacy_path, tokenizer=inefficacy_path)
             
         except Exception as e:
-            print(f"[ERROR] Failed to load models: {e}")
-            self.toxic_pipe = None
+            print(f"[ERROR] {e}")
+            self.cynicism_pipe = None
 
     def predict(self, text):
-        if not text or not self.toxic_pipe:
-            return {"politeness": 0.0, "sarcasm": 0.0, "toxicity": 0.0}
+        if not text or not self.cynicism_pipe:
+            return {"exhaustion": 0.0, "cynicism": 0.0, "inefficacy": 0.0, "burnout_index": 0.0}
 
-        try:
-            text_lower = text.lower()
-            word_count = len(text.split())
+        words = text.split()
+        chunk_size = 350 
+        chunks = [" ".join(words[i:i + chunk_size]) for i in range(0, len(words), chunk_size)]
+        
+        e_scores, c_scores, i_scores = [], [], []
 
-            # TOXICITY 
-            # Extract score if label is toxic, insult, threat, etc.
-            toxic_results = self.toxic_pipe(text)[0]
-            toxic_scores = []
-            target_labels = ['toxicity', 'severe_toxicity', 'insult', 'threat', 'obscene', 'identity_attack']
-            for res in toxic_results:
-                if res['label'] in target_labels:
-                    toxic_scores.append(res['score'])
-            toxic_score = max(toxic_scores) if toxic_scores else 0.0
+        for chunk in chunks:
+            if not chunk.strip():
+                continue
+
+            toxic_raw = self.cynicism_pipe(chunk)[0]
+            if isinstance(toxic_raw, list):
+                cynicism_prob = max([r['score'] for r in toxic_raw if r.get('label') != 'neutral'], default=0.0)
+            else:
+                cynicism_prob = toxic_raw['score'] if toxic_raw.get('label') != 'neutral' else 0.0
+
+            sent_raw = self.exhaustion_pipe(chunk)[0]
+            if isinstance(sent_raw, list): 
+                sent_raw = sent_raw[0]
+            exhaustion_prob = sent_raw['score'] if sent_raw.get('label') in ['negative', 'LABEL_0'] else 0.0
+
+            candidate_labels = ["technical block", "stuck", "making progress", "task completed"]
+            zs_res = self.inefficacy_pipe(chunk, candidate_labels=candidate_labels)
             
-            # SARCASM 
-            sarcasm_results = self.sarcasm_pipe(text)[0]
-            sarcasm_score = 0.0
-            for res in sarcasm_results:
-                if res['label'] == 'irony':
-                    sarcasm_score = res['score']
+            inefficacy_prob = 0.0
+            if zs_res['labels'][0] in ["technical block", "stuck"]:
+                inefficacy_prob = zs_res['scores'][0]
 
-            # POLITENESS 
-            sent_results = self.sentiment_pipe(text)[0]
-            top_sentiment = max(sent_results, key=lambda x: x['score'])
-            label = top_sentiment['label']
-            score = top_sentiment['score']
+            e_scores.append(exhaustion_prob)
+            c_scores.append(cynicism_prob)
+            i_scores.append(inefficacy_prob)
 
-            politeness_score = 5.0
-            if label == 'positive':
-                politeness_score = 5.0 + (score * 5.0)
-            elif label == 'neutral':
-                politeness_score = 5.0
-            elif label == 'negative':
-                politeness_score = 5.0 - (score * 5.0)
+        if not e_scores: 
+            return {"exhaustion": 0.0, "cynicism": 0.0, "inefficacy": 0.0, "burnout_index": 0.0}
 
-            
-            # Short text filter (Anti-Noise)
-            if word_count < 4 and toxic_score < 0.3:
-                sarcasm_score *= 0.2
+        e_val = round(sum(e_scores) / len(e_scores), 2)
+        c_val = round(sum(c_scores) / len(c_scores), 2)
+        i_val = round(sum(i_scores) / len(i_scores), 2)
+        
+        b_index = round((e_val + c_val + i_val) / 3.0, 2)
 
-            # status update filter (Technical Context)
-            # If it contains "successfully", "fixed", "resolved", etc., reduce sarcasm.
-            status_keywords = ["successfully", "fixed", "resolved", "completed", "scheduled", "maintenance", "updated", "deployed"]
-            is_status_msg = any(word in text_lower for word in status_keywords)
-            
-            if is_status_msg and toxic_score < 0.3:
-                sarcasm_score *= 0.2 
-
-            # Condescending Phrase Filter 
-            # If the user uses condescending language, force Politeness down.
-            condescending_phrases = ["maybe you should", "i guess i have to", "clearly you didn't", "obvious", "explain everything"]
-            if any(phrase in text_lower for phrase in condescending_phrases):
-                # Force politeness to be at most 3.0 (Rude)
-                politeness_score = min(politeness_score, 3.0)
-
-            # sarcastic praise inversion 
-            # If Sarcasm is HIGH and Politeness is high, invert Politeness.
-            if sarcasm_score * 10.0 > 7.5 and politeness_score > 6.0:
-                 politeness_score = max(0.0, 10.0 - politeness_score)
-
-            # politness boost (Magic Words)
-            # Only if not sarcastic.
-            polite_keywords = ["please", "thank", "appreciate", "kindly", "excuse me", "grateful"]
-            if any(word in text_lower for word in polite_keywords):
-                if sarcasm_score * 10.0 < 7.5:
-                    if politeness_score < 7.0: politeness_score = 7.5
-                    else: politeness_score = min(10.0, politeness_score + 1.0)
-
-            # passive aggression detection
-            # If Politeness is low (< 3.5) but Toxicity is 0, add artificial toxicity.
-            if politeness_score < 3.5 and toxic_score < 0.2:
-                toxic_score += 0.25 
-
-    
-            return {
-                "politeness": round(float(np.clip(politeness_score, 0.0, 10.0)), 2),
-                "sarcasm": round(float(np.clip(sarcasm_score * 10.0, 0.0, 10.0)), 2),
-                "toxicity": round(float(np.clip(toxic_score * 10.0, 0.0, 10.0)), 2)
-            }
-
-        except Exception as e:
-            print(f"[ERROR] Prediction failed: {e}")
-            return {"politeness": 0.0, "sarcasm": 0.0, "toxicity": 0.0}
+        return {
+            "exhaustion": e_val,
+            "cynicism": c_val,
+            "inefficacy": i_val,
+            "burnout_index": b_index
+        }
 
 if __name__ == "__main__":
     predictor = BertPredictor()
-    print("\nType a sentence to analyze or 'exit' to quit.\n")
+    print("\n--- SCRIPT ANALYZER ---")
+    
     while True:
-        text = input("TEXT: ")
-        if text.lower().strip() == "exit": break
-        print(predictor.predict(text))
-        print()
+        lines = []
+        while True:
+            try:
+                line = input()
+                if line.strip().upper() == "EXIT":
+                    exit()
+                if line.strip().upper() == "END":
+                    break
+                lines.append(line)
+            except EOFError:
+                break
+        
+        text = "\n".join(lines)
+        if text.strip():
+            print(predictor.predict(text))
+            print("-" * 40 + "\nPaste next conversation (or type 'EXIT'):\n")

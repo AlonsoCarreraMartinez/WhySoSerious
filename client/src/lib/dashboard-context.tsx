@@ -56,7 +56,6 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
       } catch (error) {
         if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-          // Bypass con Alonso
           userEmail = "alonso@ww5dl.onmicrosoft.com" 
           userName = "Alonso"
         } else {
@@ -78,6 +77,10 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
         const authData = await response.json()
 
+        if (authData.token) {
+          localStorage.setItem("jwt_token", authData.token)
+        }
+
         setInOrg(authData.in_org)
         setAuthMessage(authData.auth_message)
 
@@ -94,8 +97,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
           setCurrentUser({
             name: userName,
             email: userEmail,
-            role: authData.db_role || "Employee", // Lee el rol real
-            managedTeams: authData.managed_teams || [], // Lee los equipos con su visibilidad
+            role: authData.db_role || "Employee", 
+            managedTeams: authData.managed_teams || [], 
             avatar: "" 
           })
         }

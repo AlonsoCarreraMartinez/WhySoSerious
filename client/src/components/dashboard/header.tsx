@@ -52,7 +52,9 @@ export function Header() {
     if (currentUser?.email) {
       const fetchNotifs = () => {
         api.getNotifications(currentUser.email)
-          .then(setNotifications)
+          .then(data => {
+            setNotifications(data.filter(n => !n.isRead))
+          })
           .catch(console.error)
       }
 
@@ -65,17 +67,19 @@ export function Header() {
 
   if (!currentUser) return null
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length
+  const unreadCount = notifications.length
 
   const handleOpenChange = (open: boolean) => {
     setNotificationsOpen(open)
-    if (open && unreadCount > 0) {
-      const unread = notifications.filter(n => !n.isRead)
-      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
-      
-      unread.forEach(n => {
+    
+    if (!open && notifications.length > 0) {
+      notifications.forEach(n => {
         api.markNotificationAsRead(n.id, currentUser.email).catch(console.error)
       })
+      
+      setTimeout(() => {
+        setNotifications([])
+      }, 300)
     }
   }
 
@@ -227,18 +231,14 @@ export function Header() {
                 notifications.map((notification) => (
                   <div
                     key={notification.id}
-                    className={`rounded-lg border p-3 ${
-                      notification.isRead ? "bg-background" : "bg-primary/5 border-primary/20"
-                    }`}
+                    className="rounded-lg border p-3 bg-primary/5 border-primary/20"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <p className="font-medium text-sm">{notification.title}</p>
                         <p className="text-sm text-muted-foreground">{notification.message}</p>
                       </div>
-                      {!notification.isRead && (
-                        <div className="h-2 w-2 rounded-full bg-primary shrink-0 mt-1.5" />
-                      )}
+                      <div className="h-2 w-2 rounded-full bg-primary shrink-0 mt-1.5" />
                     </div>
                     <p className="text-xs text-muted-foreground mt-2">
                       {new Date(notification.date).toLocaleString()}
