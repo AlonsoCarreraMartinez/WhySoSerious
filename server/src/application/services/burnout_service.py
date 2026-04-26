@@ -47,18 +47,18 @@ class BurnoutService:
         hour = start_t.hour
         is_weekend = start_t.weekday() >= 5 
         
-        if is_weekend or hour < 8:
-            overtime_factor = 1.5  # Early morning or weekend.
-        elif hour >= 20:
-            overtime_factor = 1.2  # Evening or night.
+        if is_weekend:
+            overtime_factor = 0.15  # Early morning or weekend.
+        elif hour < 8 or hour >= 20:
+            overtime_factor = 0.10  # Evening or night.
         else:
-            overtime_factor = 1.0  # Working hours.
+            overtime_factor = 0.0  # Working hours.
 
         density = round(message_count / duration_minutes, 2)
 
         latency = round(duration_minutes / message_count, 2) if message_count > 0 else 0.0
 
-        return overtime_factor, density, latency
+        return overtime_factor, density, latency, duration_minutes
 
 
     # Group unanalyzed messages into sessions, analyze them, and purge text.
@@ -115,16 +115,18 @@ class BurnoutService:
             i_val = results.get("inefficacy", 0.0)
             b_index = results.get("burnout_index", 0.0)
 
-            overtime_f, density_f, latency_f = self.extract_context_features(
+            overtime_f, density_f, latency_f, duration_mins = self.extract_context_features(
                 start_time, end_time, message_count
             )
 
-            e_weighted = e_val * overtime_f
-            c_weighted = c_val * (1.2 if latency_f > 10.0 else 1.0)
-            i_weighted = i_val * (1.2 if density_f > 3.0 else 1.0)
+            latency_penalty = 0.10 if latency_f > 120.0 else 0.0
+            density_penalty = 0.10 if duration_mins >= 10.0 and density_f > 3.0 else 0.0
 
-            wbi_raw = (e_weighted + c_weighted + i_weighted) / 3.0
-            wbi_final = round(min(wbi_raw, 1.0), 2)
+            wbi_e = min(1.0, e_val + overtime_f)
+            wbi_c = min(1.0, c_val + latency_penalty)
+            wbi_i = min(1.0, i_val + density_penalty)
+
+            wbi_final = round((wbi_e + wbi_c + wbi_i) / 3.0, 2)
 
             scores = MBIScores(
                 exhaustion=e_val,
