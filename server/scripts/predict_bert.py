@@ -1,56 +1,78 @@
 import os
-from transformers import pipeline
+import numpy as np
+from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
+from pathlib import Path
 
 class BertPredictor:
+    
     def __init__(self):
+        
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        model_dir = os.path.join(current_dir, '..', 'weights', 'models', 'hf_bert_reg')
+        weights_base = Path(current_dir).parent / "weights" / "models" / "hf_bert_reg"
         
         try:
-            cynicism_path = os.path.join(model_dir, "cynicism")
-            self.cynicism_pipe = pipeline("text-classification", model=cynicism_path, tokenizer=cynicism_path)
-
-            exhaustion_path = os.path.join(model_dir, "exhaustion")
-            self.exhaustion_pipe = pipeline("sentiment-analysis", model=exhaustion_path, tokenizer=exhaustion_path)
-
-            inefficacy_path = os.path.join(model_dir, "inefficacy")
-            self.inefficacy_pipe = pipeline("zero-shot-classification", model=inefficacy_path, tokenizer=inefficacy_path)
-            
+            print("LOADING MODELS...")
+            self.cynicism_pipe = self.load_local_pipeline(weights_base / "cynicism", "zero-shot-classification")
+            self.exhaustion_pipe = self.load_local_pipeline(weights_base / "exhaustion", "sentiment-analysis")
+            self.inefficacy_pipe = self.load_local_pipeline(weights_base / "inefficacy", "zero-shot-classification")
+            print("MODELS LOADED SUCCESSFULLY")
         except Exception as e:
-            print(f"[ERROR] {e}")
+            print(f"ERROR: {e}")
             self.cynicism_pipe = None
+
+    def load_local_pipeline(self, path, task):
+        model_path = os.path.abspath(str(path))
+        tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
+        model = AutoModelForSequenceClassification.from_pretrained(model_path, local_files_only=True)
+        return pipeline(task, model=model, tokenizer=tokenizer)
 
     def predict(self, text):
         if not text or not self.cynicism_pipe:
             return {"exhaustion": 0.0, "cynicism": 0.0, "inefficacy": 0.0, "burnout_index": 0.0}
 
         words = text.split()
-        chunk_size = 350 
+        chunk_size = 200 
         chunks = [" ".join(words[i:i + chunk_size]) for i in range(0, len(words), chunk_size)]
-        
+
         e_scores, c_scores, i_scores = [], [], []
 
         for chunk in chunks:
             if not chunk.strip():
                 continue
 
-            toxic_raw = self.cynicism_pipe(chunk)[0]
-            if isinstance(toxic_raw, list):
-                cynicism_prob = max([r['score'] for r in toxic_raw if r.get('label') != 'neutral'], default=0.0)
-            else:
-                cynicism_prob = toxic_raw['score'] if toxic_raw.get('label') != 'neutral' else 0.0
+            cyn_candidate_labels = [
+                "sarcastic or passive-aggressive",
+                "apathy and lack of interest",
+                "complaining about others",
+                "constructive technical feedback",
+                "normal team communication"
+            ]
+            zs_cyn_res = self.cynicism_pipe(chunk, candidate_labels=cyn_candidate_labels)
+            
+            cynicism_prob = 0.0
+            if zs_cyn_res['labels'][0] in ["sarcastic or passive-aggressive", "apathy and lack of interest", "complaining about others"]:
+                if zs_cyn_res['scores'][0] > 0.45:
+                    cynicism_prob = zs_cyn_res['scores'][0]
 
             sent_raw = self.exhaustion_pipe(chunk)[0]
             if isinstance(sent_raw, list): 
                 sent_raw = sent_raw[0]
             exhaustion_prob = sent_raw['score'] if sent_raw.get('label') in ['negative', 'LABEL_0'] else 0.0
 
-            candidate_labels = ["technical block", "stuck", "making progress", "task completed"]
+            candidate_labels = [
+                "feeling incompetent",     
+                "wasted effort",           
+                "struggling with code",    
+                "external system failure", 
+                "making progress",         
+                "task completed"           
+            ]
             zs_res = self.inefficacy_pipe(chunk, candidate_labels=candidate_labels)
             
             inefficacy_prob = 0.0
-            if zs_res['labels'][0] in ["technical block", "stuck"]:
-                inefficacy_prob = zs_res['scores'][0]
+            if zs_res['labels'][0] in ["feeling incompetent", "wasted effort", "struggling with code"]:
+                if zs_res['scores'][0] > 0.45:
+                    inefficacy_prob = zs_res['scores'][0]
 
             e_scores.append(exhaustion_prob)
             c_scores.append(cynicism_prob)
@@ -74,22 +96,40 @@ class BertPredictor:
 
 if __name__ == "__main__":
     predictor = BertPredictor()
-    print("\n--- SCRIPT ANALYZER ---")
     
     while True:
-        lines = []
-        while True:
-            try:
+        try:
+            prev_lines = []
+            print("PREVIOUS CONTEXT (type 'EOF' to finish, 'exit' to quit):")
+            while True:
                 line = input()
-                if line.strip().upper() == "EXIT":
-                    exit()
-                if line.strip().upper() == "END":
+                if line.strip() == "EOF":
                     break
-                lines.append(line)
-            except EOFError:
+                prev_lines.append(line)
+            
+            if not prev_lines or prev_lines[0].lower() == "exit":
                 break
-        
-        text = "\n".join(lines)
-        if text.strip():
-            print(predictor.predict(text))
-            print("-" * 40 + "\nPaste next conversation (or type 'EXIT'):\n")
+            previous_context = " ".join(prev_lines).strip()
+
+            curr_lines = []
+            print("CURRENT MESSAGE (type 'EOF' to finish, 'exit' to quit):")
+            while True:
+                line = input()
+                if line.strip() == "EOF":
+                    break
+                curr_lines.append(line)
+                
+            if not curr_lines or curr_lines[0].lower() == "exit":
+                break
+            current_message = " ".join(curr_lines).strip()
+
+            combined_text = f"{previous_context} {current_message}".strip()
+            
+            if combined_text:
+                result = predictor.predict(combined_text)
+                print(f"({result['exhaustion']}, {result['cynicism']}, {result['inefficacy']}, {result['burnout_index']})\n")
+
+        except EOFError:
+            break
+        except KeyboardInterrupt:
+            break

@@ -17,7 +17,7 @@ class BertPredictor:
         try:
             print(f"LOADING MODELS")
 
-            self.cynicism_pipe = self.load_local_pipeline(weights_base / "cynicism", "text-classification")
+            self.cynicism_pipe = self.load_local_pipeline(weights_base / "cynicism", "zero-shot-classification")
             self.exhaustion_pipe = self.load_local_pipeline(weights_base / "exhaustion", "sentiment-analysis")
             self.inefficacy_pipe = self.load_local_pipeline(weights_base / "inefficacy", "zero-shot-classification")
             
@@ -37,7 +37,7 @@ class BertPredictor:
             return {"exhaustion": 0.0, "cynicism": 0.0, "inefficacy": 0.0, "burnout_index": 0.0}
 
         words = text.split()
-        chunk_size = 350 
+        chunk_size = 200 
         
         chunks = [" ".join(words[i:i + chunk_size]) for i in range(0, len(words), chunk_size)]
         
@@ -50,11 +50,19 @@ class BertPredictor:
                 continue
 
             # Cynicism
-            toxic_raw = self.cynicism_pipe(chunk)[0]
-            if isinstance(toxic_raw, list):
-                cynicism_prob = max([r['score'] for r in toxic_raw if r.get('label') != 'neutral'], default=0.0)
-            else:
-                cynicism_prob = toxic_raw['score'] if toxic_raw.get('label') != 'neutral' else 0.0
+            cyn_candidate_labels = [
+                "sarcastic or passive-aggressive",
+                "apathy and lack of interest",
+                "complaining about others",
+                "constructive technical feedback",
+                "normal team communication"
+            ]
+            zs_cyn_res = self.cynicism_pipe(chunk, candidate_labels=cyn_candidate_labels)
+            
+            cynicism_prob = 0.0
+            if zs_cyn_res['labels'][0] in ["sarcastic or passive-aggressive", "apathy and lack of interest", "complaining about others"]:
+                if zs_cyn_res['scores'][0] > 0.45:
+                    cynicism_prob = zs_cyn_res['scores'][0]
 
             # Exhaustion
             sent_raw = self.exhaustion_pipe(chunk)[0]
@@ -62,13 +70,21 @@ class BertPredictor:
                 sent_raw = sent_raw[0]
             exhaustion_prob = sent_raw['score'] if sent_raw.get('label') in ['negative', 'LABEL_0'] else 0.0
 
-            # Inefficacy (Zero-shot)
-            candidate_labels = ["technical block", "stuck", "making progress", "task completed"]
+            # Inefficacy 
+            candidate_labels = [
+                "feeling incompetent",     
+                "wasted effort",           
+                "struggling with code",    
+                "external system failure", 
+                "making progress",         
+                "task completed"           
+            ]
             zs_res = self.inefficacy_pipe(chunk, candidate_labels=candidate_labels)
             
             inefficacy_prob = 0.0
-            if zs_res['labels'][0] in ["technical block", "stuck"]:
-                inefficacy_prob = zs_res['scores'][0]
+            if zs_res['labels'][0] in ["feeling incompetent", "wasted effort", "struggling with code"]:
+                if zs_res['scores'][0] > 0.45:
+                    inefficacy_prob = zs_res['scores'][0]
 
             e_scores.append(exhaustion_prob)
             c_scores.append(cynicism_prob)

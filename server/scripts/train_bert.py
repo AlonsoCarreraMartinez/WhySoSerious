@@ -32,12 +32,11 @@ def download_and_save_model(model_name, base_output_dir, subfolder_name):
     except Exception as e:
         print(f"Error handling {model_name}: {e}")
 
-
 def main():
     args = parse_args()
     
     models_config = {
-        "cynicism": "unitary/unbiased-toxic-roberta",
+        "cynicism": "facebook/bart-large-mnli",
         "exhaustion": "cardiffnlp/twitter-roberta-base-sentiment-latest",
         "inefficacy": "facebook/bart-large-mnli" 
     }
