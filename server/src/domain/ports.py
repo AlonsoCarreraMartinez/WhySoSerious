@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Optional, List
-from .models import User, Team, Channel, Message, MBIScores, ConversationSession, HealthTrend, Notification
-
+from .models import User, Team, Channel, Message, MBIScores, ConversationSession, HealthTrend, Notification, ContextMetrics, WBIScores
 
 class UserRepository(ABC):
     
@@ -20,6 +19,7 @@ class UserRepository(ABC):
     def get_by_ids(self, user_ids: List[str]) -> List[User]:
         pass
 
+
 class TeamRepository(ABC):
 
     # Fetch team details by ID.
@@ -34,7 +34,7 @@ class TeamRepository(ABC):
 
     # Update teams's bert scores.
     @abstractmethod
-    def update_burnout_metrics(self, team_id: str, scores: MBIScores): 
+    def update_burnout_metrics(self, team_id: str, mbi: MBIScores, wbi: WBIScores, context: Optional[ContextMetrics] = None): 
         pass
 
     # Fetches all teams stored in the database.
@@ -47,6 +47,7 @@ class TeamRepository(ABC):
     def get_teams_by_manager(self, manager_email: str) -> List[Team]:
         pass
 
+
 class ChannelRepository(ABC):
 
     # List all channels belonging to a team.
@@ -56,7 +57,7 @@ class ChannelRepository(ABC):
 
     # Update channel's bert scores.
     @abstractmethod
-    def update_burnout_metrics(self, channel_id: str, scores: MBIScores): 
+    def update_burnout_metrics(self, channel_id: str, mbi: MBIScores, wbi: WBIScores, context: Optional[ContextMetrics] = None): 
         pass
 
     # Fetches all channels stored in the database.

@@ -7,6 +7,7 @@ from infrastructure.api.security import get_current_user, verify_team_access
 
 router = APIRouter(prefix="/burnout", tags=["Burnout"])
 
+# Serves the historical trend data (MBI, WBI, Context) for a specific team or channel to render the charts.
 @router.get("/historical/{target_name}", response_model=List[HistoricalDataPointDTO])
 async def get_historical_data(
     target_name: str,
@@ -27,10 +28,6 @@ async def get_historical_data(
                 verify_team_access(channel.team_name, current_user)
             else:
                 raise HTTPException(status_code=403, detail="You do not have access to this resource")
-
-    db_trends = burnout_repo.get_trends(
-        target_id=target_name, 
-        start_date=start_date, 
-        end_date=end_date
-    )
+                
+    db_trends = burnout_repo.get_trends(target_name, start_date, end_date)
     return [map_trend_to_historical_dto(trend) for trend in db_trends]

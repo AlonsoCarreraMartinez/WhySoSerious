@@ -7,6 +7,7 @@ from infrastructure.api.security import get_current_user, verify_team_access
 
 router = APIRouter(prefix="/channels", tags=["Channels"])
 
+# Retrieves channel data for the dashboard, filtering by the user's managed teams.
 @router.get("/dashboard", response_model=List[ChannelDashboardResponseDTO])
 async def get_dashboard_channels(
     channel_repo = Depends(get_channel_repository),
@@ -22,6 +23,7 @@ async def get_dashboard_channels(
     results.sort(key=lambda x: x.burnoutScore, reverse=True)
     return results
 
+# Fetches specific channels by their ID or by the team they belong to, applying the mappers.
 @router.get("/team/{team_name}", response_model=List[ChannelDashboardResponseDTO])
 async def get_team_channels(
     team_name: str,
@@ -42,7 +44,6 @@ async def get_channel_detail(
     channel = channel_repo.get_by_id(channel_id)
     if not channel:
         raise HTTPException(status_code=404, detail="Channel not found")
-    
-    verify_team_access(channel.team_name, current_user)
         
+    verify_team_access(channel.team_name, current_user)
     return map_channel_to_dashboard_dto(channel)

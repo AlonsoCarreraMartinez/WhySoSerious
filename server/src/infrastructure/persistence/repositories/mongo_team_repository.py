@@ -1,6 +1,6 @@
 from typing import Optional, List
 from domain.ports import TeamRepository
-from domain.models import Team, MBIScores
+from domain.models import Team, MBIScores, ContextMetrics, WBIScores
 from infrastructure.persistence.mongo_client import mongo_client
 
 class MongoTeamRepository(TeamRepository):
@@ -24,13 +24,20 @@ class MongoTeamRepository(TeamRepository):
        
         cursor = self.collection.find({"managers": manager})
         
-        return [Team(**doc) for doc in cursor] # Convert each MongoDB document into a Team model object using unpacking (**).
+        return [Team(**doc) for doc in cursor] 
 
     # Update the team's global scores calculated by the BurnoutService.
-    def update_burnout_metrics(self, target_id: str, scores: MBIScores):
+    def update_burnout_metrics(self, team_id: str, mbi: MBIScores, wbi: WBIScores, context: Optional[ContextMetrics] = None):
+        update_data = {
+            "burnout_mean": mbi.model_dump(),
+            "wbi_scores": wbi.model_dump()
+        }
+        if context:
+            update_data["context_metrics"] = context.model_dump()
+            
         self.collection.update_one(
-            {"_id": target_id},
-            {"$set": {"burnout_mean": scores.model_dump()}},
+            {"_id": team_id},
+            {"$set": update_data},
             upsert=False 
         )
 
@@ -41,6 +48,7 @@ class MongoTeamRepository(TeamRepository):
     
     # Fetches all teams where a specific email is listed in the managers array.
     def get_teams_by_manager(self, manager_email: str) -> List[Team]:
+        
         query = {"managers": {"$regex": f"^{manager_email}$", "$options": "i"}}
         cursor = self.collection.find(query)
         return [Team(**doc) for doc in cursor]

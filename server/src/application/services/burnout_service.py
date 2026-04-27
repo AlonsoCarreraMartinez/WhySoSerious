@@ -1,7 +1,7 @@
 import uuid
 from typing import List, Dict
 from datetime import datetime
-from domain.models import MBIScores, Message, ConversationSession
+from domain.models import MBIScores, Message, ConversationSession, ContextMetrics, WBIScores
 from domain.ports import MessageRepository, TeamRepository, ChannelRepository, BurnoutRepository, HealthTrend, NotificationObserver
 from src.infrastructure.ml.bert_inference import BertPredictor
 
@@ -128,11 +128,14 @@ class BurnoutService:
 
             wbi_final = round((wbi_e + wbi_c + wbi_i) / 3.0, 2)
 
-            scores = MBIScores(
+            mbi = MBIScores(
                 exhaustion=e_val,
                 cynicism=c_val,
                 inefficacy=i_val,
-                burnout_index=b_index,
+                burnout_index=b_index
+            )
+            
+            wbi = WBIScores(
                 wbi=wbi_final,
                 wbi_e=wbi_e,
                 wbi_c=wbi_c,
@@ -146,7 +149,8 @@ class BurnoutService:
                 startTime=start_time, 
                 endTime=end_time, 
                 messageCount=message_count,
-                sessionScores=scores,
+                sessionScores=mbi,
+                wbi_scores=wbi,
                 overtime_factor=overtime_f,
                 density=density_f,
                 latency=latency_f
@@ -172,7 +176,10 @@ class BurnoutService:
             if not channels:
                 continue
                 
-            team_sums = {"e": 0.0, "c": 0.0, "i": 0.0, "b": 0.0, "w": 0.0, "we": 0.0, "wc": 0.0, "wi": 0.0}
+            team_mbi = {"e": 0.0, "c": 0.0, "i": 0.0, "b": 0.0}
+            team_wbi = {"w": 0.0, "we": 0.0, "wc": 0.0, "wi": 0.0}
+            team_ctx_sums = {"d": 0.0, "l": 0.0}
+            team_overtime_list = []
             team_session_count = 0
 
             for channel in channels:
@@ -182,85 +189,123 @@ class BurnoutService:
                 if not sessions:
                     continue
 
-                chan_sums = {"e": 0.0, "c": 0.0, "i": 0.0, "b": 0.0, "w": 0.0, "we": 0.0, "wc": 0.0, "wi": 0.0}
+                chan_mbi = {"e": 0.0, "c": 0.0, "i": 0.0, "b": 0.0}
+                chan_wbi = {"w": 0.0, "we": 0.0, "wc": 0.0, "wi": 0.0}
+                chan_ctx_sums = {"d": 0.0, "l": 0.0}
+                chan_overtime_list = []
                 valid_chan_sessions = 0
                 
                 for s in sessions:
-                    if s.sessionScores:
-                        chan_sums["e"] += s.sessionScores.exhaustion
-                        chan_sums["c"] += s.sessionScores.cynicism
-                        chan_sums["i"] += s.sessionScores.inefficacy
-                        chan_sums["b"] += s.sessionScores.burnout_index
-                        chan_sums["w"] += getattr(s.sessionScores, 'wbi', 0.0) or 0.0 
-                        chan_sums["we"] += getattr(s.sessionScores, 'wbi_e', s.sessionScores.exhaustion) or 0.0
-                        chan_sums["wc"] += getattr(s.sessionScores, 'wbi_c', s.sessionScores.cynicism) or 0.0
-                        chan_sums["wi"] += getattr(s.sessionScores, 'wbi_i', s.sessionScores.inefficacy) or 0.0
+                    if s.sessionScores and s.wbi_scores:
+                        chan_mbi["e"] += s.sessionScores.exhaustion
+                        chan_mbi["c"] += s.sessionScores.cynicism
+                        chan_mbi["i"] += s.sessionScores.inefficacy
+                        chan_mbi["b"] += s.sessionScores.burnout_index
                         
+                        chan_wbi["w"] += s.wbi_scores.wbi
+                        chan_wbi["we"] += s.wbi_scores.wbi_e
+                        chan_wbi["wc"] += s.wbi_scores.wbi_c
+                        chan_wbi["wi"] += s.wbi_scores.wbi_i
+                        
+                        chan_overtime_list.append(getattr(s, 'overtime_factor', 1.0))
+                        chan_ctx_sums["d"] += getattr(s, 'density', 0.0)
+                        chan_ctx_sums["l"] += getattr(s, 'latency', 0.0)
                         valid_chan_sessions += 1
 
                 if valid_chan_sessions > 0:
-                    mean_chan = MBIScores(
-                        exhaustion=round(chan_sums["e"] / valid_chan_sessions, 2),
-                        cynicism=round(chan_sums["c"] / valid_chan_sessions, 2),
-                        inefficacy=round(chan_sums["i"] / valid_chan_sessions, 2),
-                        burnout_index=round(chan_sums["b"] / valid_chan_sessions, 2),
-                        wbi=round(chan_sums["w"] / valid_chan_sessions, 2),
-                        wbi_e=round(chan_sums["we"] / valid_chan_sessions, 2),
-                        wbi_c=round(chan_sums["wc"] / valid_chan_sessions, 2),
-                        wbi_i=round(chan_sums["wi"] / valid_chan_sessions, 2)
+                    mean_mbi_chan = MBIScores(
+                        exhaustion=round(chan_mbi["e"] / valid_chan_sessions, 2),
+                        cynicism=round(chan_mbi["c"] / valid_chan_sessions, 2),
+                        inefficacy=round(chan_mbi["i"] / valid_chan_sessions, 2),
+                        burnout_index=round(chan_mbi["b"] / valid_chan_sessions, 2)
                     )
                     
-                    self.channel_repo.update_burnout_metrics(channel.id, mean_chan)
+                    mean_wbi_chan = WBIScores(
+                        wbi=round(chan_wbi["w"] / valid_chan_sessions, 2),
+                        wbi_e=round(chan_wbi["we"] / valid_chan_sessions, 2),
+                        wbi_c=round(chan_wbi["wc"] / valid_chan_sessions, 2),
+                        wbi_i=round(chan_wbi["wi"] / valid_chan_sessions, 2)
+                    )
+                    
+                    mode_overtime_chan = max(set(chan_overtime_list), key=chan_overtime_list.count) if chan_overtime_list else 1.0
+
+                    mean_ctx_chan = ContextMetrics(
+                        avg_overtime=round(mode_overtime_chan, 2),
+                        avg_density=round(chan_ctx_sums["d"] / valid_chan_sessions, 2),
+                        avg_latency=round(chan_ctx_sums["l"] / valid_chan_sessions, 2)
+                    )
+                    
+                    self.channel_repo.update_burnout_metrics(channel.id, mean_mbi_chan, mean_wbi_chan, mean_ctx_chan)
                     print(f"  > Metrics updated for Channel: '{channel.name}'")
 
-                    is_critical_chan = mean_chan.burnout_index >= 0.75
+                    is_critical_chan = mean_mbi_chan.burnout_index >= 0.75
                     if is_critical_chan and not was_critical_chan:
                         for obs in self.observers:
-                            obs.on_critical_burnout(channel.name, team.name, mean_chan.burnout_index, True)
+                            obs.on_critical_burnout(channel.name, team.name, mean_mbi_chan.burnout_index, True)
 
                     chan_trend = HealthTrend(
                         targetId=channel.id,
                         date=datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
-                        score=mean_chan,
+                        score=mean_mbi_chan,
+                        wbi=mean_wbi_chan,
+                        context=mean_ctx_chan,
                         type="channel"
                     )
                     self.burnout_repo.save_trend(chan_trend)
 
-                    team_sums["e"] += chan_sums["e"]
-                    team_sums["c"] += chan_sums["c"]
-                    team_sums["i"] += chan_sums["i"]
-                    team_sums["b"] += chan_sums["b"]
-                    team_sums["w"] += chan_sums["w"]
-                    team_sums["we"] += chan_sums["we"]
-                    team_sums["wc"] += chan_sums["wc"]
-                    team_sums["wi"] += chan_sums["wi"]
+                    team_mbi["e"] += chan_mbi["e"]
+                    team_mbi["c"] += chan_mbi["c"]
+                    team_mbi["i"] += chan_mbi["i"]
+                    team_mbi["b"] += chan_mbi["b"]
+                    
+                    team_wbi["w"] += chan_wbi["w"]
+                    team_wbi["we"] += chan_wbi["we"]
+                    team_wbi["wc"] += chan_wbi["wc"]
+                    team_wbi["wi"] += chan_wbi["wi"]
+                    
+                    team_ctx_sums["d"] += chan_ctx_sums["d"]
+                    team_ctx_sums["l"] += chan_ctx_sums["l"]
+                    team_overtime_list.extend(chan_overtime_list)
 
                     team_session_count += valid_chan_sessions
 
             if team_session_count > 0:
-                mean_team = MBIScores(
-                    exhaustion=round(team_sums["e"] / team_session_count, 2),
-                    cynicism=round(team_sums["c"] / team_session_count, 2),
-                    inefficacy=round(team_sums["i"] / team_session_count, 2),
-                    burnout_index=round(team_sums["b"] / team_session_count, 2),
-                    wbi=round(team_sums["w"] / team_session_count, 2),
-                    wbi_e=round(team_sums["we"] / team_session_count, 2),
-                    wbi_c=round(team_sums["wc"] / team_session_count, 2),
-                    wbi_i=round(team_sums["wi"] / team_session_count, 2)
+                mean_mbi_team = MBIScores(
+                    exhaustion=round(team_mbi["e"] / team_session_count, 2),
+                    cynicism=round(team_mbi["c"] / team_session_count, 2),
+                    inefficacy=round(team_mbi["i"] / team_session_count, 2),
+                    burnout_index=round(team_mbi["b"] / team_session_count, 2)
                 )
                 
-                self.team_repo.update_burnout_metrics(team.name, mean_team)
+                mean_wbi_team = WBIScores(
+                    wbi=round(team_wbi["w"] / team_session_count, 2),
+                    wbi_e=round(team_wbi["we"] / team_session_count, 2),
+                    wbi_c=round(team_wbi["wc"] / team_session_count, 2),
+                    wbi_i=round(team_wbi["wi"] / team_session_count, 2)
+                )
+                
+                mode_overtime_team = max(set(team_overtime_list), key=team_overtime_list.count) if team_overtime_list else 1.0
+
+                mean_ctx_team = ContextMetrics(
+                    avg_overtime=round(mode_overtime_team, 2),
+                    avg_density=round(team_ctx_sums["d"] / team_session_count, 2),
+                    avg_latency=round(team_ctx_sums["l"] / team_session_count, 2)
+                )
+                
+                self.team_repo.update_burnout_metrics(team.name, mean_mbi_team, mean_wbi_team, mean_ctx_team)
                 print(f"Metrics updated for Team: {team.name}")
 
-                is_critical_team = mean_team.burnout_index >= 0.75
+                is_critical_team = mean_mbi_team.burnout_index >= 0.75
                 if is_critical_team and not was_critical_team:
                     for obs in self.observers:
-                        obs.on_critical_burnout(team.name, team.name, mean_team.burnout_index, False)
+                        obs.on_critical_burnout(team.name, team.name, mean_mbi_team.burnout_index, False)
 
                 team_trend = HealthTrend(
                     targetId=team.name,
                     date=datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
-                    score=mean_team,
+                    score=mean_mbi_team,
+                    wbi=mean_wbi_team,
+                    context=mean_ctx_team,
                     type="team"
                 )
                 self.burnout_repo.save_trend(team_trend)

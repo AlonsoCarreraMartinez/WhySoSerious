@@ -6,6 +6,7 @@ from infrastructure.api.security import create_access_token
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
+# Handles the login process by validating the user's email against Azure AD and the local database.
 @router.post("/verify", response_model=AuthStatusDTO)
 async def verify_user_role(
     request: LoginRequestDTO,

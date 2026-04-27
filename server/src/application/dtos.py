@@ -13,6 +13,11 @@ class AuthStatusDTO(BaseModel):
 class LoginRequestDTO(BaseModel):
     email: str
 
+class ContextMetricsDTO(BaseModel):
+    avg_overtime: float
+    avg_density: float
+    avg_latency: float
+
 class TeamDashboardResponseDTO(BaseModel):
     id: str
     name: str
@@ -27,6 +32,7 @@ class TeamDashboardResponseDTO(BaseModel):
     wbi_e: Optional[int] = None
     wbi_c: Optional[int] = None
     wbi_i: Optional[int] = None
+    context: Optional[ContextMetricsDTO] = None
 
 class ChannelDashboardResponseDTO(BaseModel):
     id: str
@@ -43,6 +49,7 @@ class ChannelDashboardResponseDTO(BaseModel):
     wbi_e: Optional[int] = None
     wbi_c: Optional[int] = None
     wbi_i: Optional[int] = None
+    context: Optional[ContextMetricsDTO] = None
 
 class HistoricalDataPointDTO(BaseModel):
     date: str
@@ -54,6 +61,7 @@ class HistoricalDataPointDTO(BaseModel):
     wbi_e: Optional[int] = None
     wbi_c: Optional[int] = None
     wbi_i: Optional[int] = None
+    context: Optional[ContextMetricsDTO] = None
 
 class MemberResponseDTO(BaseModel):
     id: str

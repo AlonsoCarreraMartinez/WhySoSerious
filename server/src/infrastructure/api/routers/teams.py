@@ -7,6 +7,7 @@ from infrastructure.api.security import get_current_user, verify_team_access
 
 router = APIRouter(prefix="/teams", tags=["Teams"])
 
+# Retrieves high-level team metrics for the main dashboard, enforcing access control (admin vs manager).
 @router.get("/dashboard", response_model=List[TeamDashboardResponseDTO])
 async def get_dashboard_data(
     team_repo = Depends(get_team_repository),
@@ -22,6 +23,7 @@ async def get_dashboard_data(
     results.sort(key=lambda x: x.burnoutScore, reverse=True)
     return results
 
+# Fetches detailed metrics for a single specific team using its name/ID.
 @router.get("/{team_name}", response_model=TeamDashboardResponseDTO)
 async def get_team_detail(
     team_name: str,
@@ -29,7 +31,7 @@ async def get_team_detail(
     current_user: dict = Depends(get_current_user)
 ):
     verify_team_access(team_name, current_user)
-
+    
     team = team_repo.get_by_id(team_name)
     if not team:
         raise HTTPException(status_code=404, detail="Team not found")

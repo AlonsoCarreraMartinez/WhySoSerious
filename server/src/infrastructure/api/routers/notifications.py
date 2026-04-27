@@ -6,6 +6,7 @@ from infrastructure.api.security import get_current_user
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
 
+# Manages the retrieval of alerts and system notifications for a specific user based on their role.
 @router.get("/{email}", response_model=List[NotificationResponseDTO])
 async def get_user_notifications(
     email: str,
@@ -37,6 +38,7 @@ async def get_user_notifications(
         ))
     return results
 
+# Allows users to mark specific notifications as read to update the UI badge.
 @router.put("/{notification_id}/read")
 async def mark_notification_read(
     notification_id: str,
@@ -46,6 +48,6 @@ async def mark_notification_read(
 ):
     if not current_user.get("is_admin") and current_user.get("email") != request.email:
         raise HTTPException(status_code=403, detail="Unauthorized access")
-
+        
     notification_repo.mark_as_read(notification_id, request.email)
     return {"status": "success"}

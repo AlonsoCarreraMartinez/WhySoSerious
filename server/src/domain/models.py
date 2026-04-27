@@ -6,10 +6,17 @@ class MBIScores(BaseModel):
     cynicism: float       
     inefficacy: float    
     burnout_index: float 
-    wbi: Optional[float] = None
-    wbi_e: Optional[float] = None 
-    wbi_c: Optional[float] = None 
-    wbi_i: Optional[float] = None 
+
+class ContextMetrics(BaseModel):
+    avg_overtime: float = 1.0
+    avg_density: float = 0.0
+    avg_latency: float = 0.0
+
+class WBIScores(BaseModel):
+    wbi: float
+    wbi_e: float
+    wbi_c: float
+    wbi_i: float
 
 class User(BaseModel):
     email: str = Field(alias="_id")
@@ -26,6 +33,8 @@ class Team(BaseModel):
     channels: List[str] = []
     description: Optional[str] = None
     burnout_mean: Optional[MBIScores] = None
+    context_metrics: Optional[ContextMetrics] = None
+    wbi_scores: Optional[WBIScores] = None
 
 class Channel(BaseModel):
     id: str = Field(alias="_id")
@@ -36,6 +45,8 @@ class Channel(BaseModel):
     members: List[str] = []
     description: Optional[str] = None
     burnout_mean: Optional[MBIScores] = None
+    context_metrics: Optional[ContextMetrics] = None
+    wbi_scores: Optional[WBIScores] = None
 
 class ConversationSession(BaseModel):
     id: str = Field(alias="_id")  
@@ -45,6 +56,7 @@ class ConversationSession(BaseModel):
     endTime: str
     messageCount: int = 0
     sessionScores: Optional[MBIScores] = None
+    wbi_scores: Optional[WBIScores] = None
     overtime_factor: float = 1.0
     density: float = 0.0
     latency: float = 0.0
@@ -72,6 +84,8 @@ class HealthTrend(BaseModel):
     targetId: str  
     date: str      
     score: MBIScores
+    context: Optional[ContextMetrics] = None
+    wbi: Optional[WBIScores] = None
     type: str
 
 class Notification(BaseModel):

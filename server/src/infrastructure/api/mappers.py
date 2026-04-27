@@ -1,4 +1,4 @@
-from application.dtos import TeamDashboardResponseDTO, ChannelDashboardResponseDTO, HistoricalDataPointDTO, MemberResponseDTO
+from application.dtos import TeamDashboardResponseDTO, ChannelDashboardResponseDTO, HistoricalDataPointDTO, MemberResponseDTO, ContextMetricsDTO
 from domain.models import Team, Channel, HealthTrend, User
 from datetime import datetime
 
@@ -16,11 +16,19 @@ def map_team_to_dashboard_dto(team: Team) -> TeamDashboardResponseDTO:
     cynicism = int(team.burnout_mean.cynicism * 100) if team.burnout_mean else 0
     inefficacy = int(team.burnout_mean.inefficacy * 100) if team.burnout_mean else 0
 
-    wbi = int(team.burnout_mean.wbi * 100) if team.burnout_mean and getattr(team.burnout_mean, 'wbi', None) is not None else b_score
-    wbi_e = int(team.burnout_mean.wbi_e * 100) if team.burnout_mean and getattr(team.burnout_mean, 'wbi_e', None) is not None else exhaustion
-    wbi_c = int(team.burnout_mean.wbi_c * 100) if team.burnout_mean and getattr(team.burnout_mean, 'wbi_c', None) is not None else cynicism
-    wbi_i = int(team.burnout_mean.wbi_i * 100) if team.burnout_mean and getattr(team.burnout_mean, 'wbi_i', None) is not None else inefficacy
+    wbi = int(team.wbi_scores.wbi * 100) if team.wbi_scores else b_score
+    wbi_e = int(team.wbi_scores.wbi_e * 100) if team.wbi_scores else exhaustion
+    wbi_c = int(team.wbi_scores.wbi_c * 100) if team.wbi_scores else cynicism
+    wbi_i = int(team.wbi_scores.wbi_i * 100) if team.wbi_scores else inefficacy
     
+    ctx_dto = None
+    if getattr(team, 'context_metrics', None):
+        ctx_dto = ContextMetricsDTO(
+            avg_overtime=round(team.context_metrics.avg_overtime, 2),
+            avg_density=round(team.context_metrics.avg_density, 2),
+            avg_latency=round(team.context_metrics.avg_latency, 2)
+        )
+
     return TeamDashboardResponseDTO(
         id=team.name, 
         name=team.name,
@@ -34,7 +42,8 @@ def map_team_to_dashboard_dto(team: Team) -> TeamDashboardResponseDTO:
         wbi=wbi,
         wbi_e=wbi_e,
         wbi_c=wbi_c,
-        wbi_i=wbi_i
+        wbi_i=wbi_i,
+        context=ctx_dto
     )
 
 # Transforms a Channel domain model into a Dashboard DTO for frontend views.
@@ -44,11 +53,19 @@ def map_channel_to_dashboard_dto(channel: Channel) -> ChannelDashboardResponseDT
     cynicism = int(channel.burnout_mean.cynicism * 100) if channel.burnout_mean else 0
     inefficacy = int(channel.burnout_mean.inefficacy * 100) if channel.burnout_mean else 0
 
-    wbi = int(channel.burnout_mean.wbi * 100) if channel.burnout_mean and getattr(channel.burnout_mean, 'wbi', None) is not None else b_score
-    wbi_e = int(channel.burnout_mean.wbi_e * 100) if channel.burnout_mean and getattr(channel.burnout_mean, 'wbi_e', None) is not None else exhaustion
-    wbi_c = int(channel.burnout_mean.wbi_c * 100) if channel.burnout_mean and getattr(channel.burnout_mean, 'wbi_c', None) is not None else cynicism
-    wbi_i = int(channel.burnout_mean.wbi_i * 100) if channel.burnout_mean and getattr(channel.burnout_mean, 'wbi_i', None) is not None else inefficacy
+    wbi = int(channel.wbi_scores.wbi * 100) if channel.wbi_scores else b_score
+    wbi_e = int(channel.wbi_scores.wbi_e * 100) if channel.wbi_scores else exhaustion
+    wbi_c = int(channel.wbi_scores.wbi_c * 100) if channel.wbi_scores else cynicism
+    wbi_i = int(channel.wbi_scores.wbi_i * 100) if channel.wbi_scores else inefficacy
     
+    ctx_dto = None
+    if getattr(channel, 'context_metrics', None):
+        ctx_dto = ContextMetricsDTO(
+            avg_overtime=round(channel.context_metrics.avg_overtime, 2),
+            avg_density=round(channel.context_metrics.avg_density, 2),
+            avg_latency=round(channel.context_metrics.avg_latency, 2)
+        )
+
     return ChannelDashboardResponseDTO(
         id=channel.id,
         teamId=channel.team_name,
@@ -63,7 +80,8 @@ def map_channel_to_dashboard_dto(channel: Channel) -> ChannelDashboardResponseDT
         wbi=wbi,
         wbi_e=wbi_e,
         wbi_c=wbi_c,
-        wbi_i=wbi_i
+        wbi_i=wbi_i,
+        context=ctx_dto
     )
 
 # Transforms a HealthTrend domain model into a HistoricalDataPointDTO for frontend charts.
@@ -76,10 +94,18 @@ def map_trend_to_historical_dto(trend: HealthTrend) -> HistoricalDataPointDTO:
     cynicism = int(trend.score.cynicism * 100) if trend.score else 0
     inefficacy = int(trend.score.inefficacy * 100) if trend.score else 0
 
-    wbi = int(getattr(trend.score, 'wbi', trend.score.burnout_index) * 100) if trend.score else b_score
-    wbi_e = int(getattr(trend.score, 'wbi_e', trend.score.exhaustion) * 100) if trend.score else exhaustion
-    wbi_c = int(getattr(trend.score, 'wbi_c', trend.score.cynicism) * 100) if trend.score else cynicism
-    wbi_i = int(getattr(trend.score, 'wbi_i', trend.score.inefficacy) * 100) if trend.score else inefficacy
+    wbi = int(getattr(trend.wbi, 'wbi', trend.score.burnout_index) * 100) if trend.wbi else b_score
+    wbi_e = int(getattr(trend.wbi, 'wbi_e', trend.score.exhaustion) * 100) if trend.wbi else exhaustion
+    wbi_c = int(getattr(trend.wbi, 'wbi_c', trend.score.cynicism) * 100) if trend.wbi else cynicism
+    wbi_i = int(getattr(trend.wbi, 'wbi_i', trend.score.inefficacy) * 100) if trend.wbi else inefficacy
+
+    ctx_dto = None
+    if getattr(trend, 'context', None):
+        ctx_dto = ContextMetricsDTO(
+            avg_overtime=round(trend.context.avg_overtime, 2),
+            avg_density=round(trend.context.avg_density, 2),
+            avg_latency=round(trend.context.avg_latency, 2)
+        )
 
     return HistoricalDataPointDTO(
         date=formatted_date,
@@ -90,7 +116,8 @@ def map_trend_to_historical_dto(trend: HealthTrend) -> HistoricalDataPointDTO:
         wbi=wbi,
         wbi_e=wbi_e,
         wbi_c=wbi_c,
-        wbi_i=wbi_i
+        wbi_i=wbi_i,
+        context=ctx_dto
     )
 
 # Transforms a User domain model into a MemberResponseDTO, assigning the correct role.

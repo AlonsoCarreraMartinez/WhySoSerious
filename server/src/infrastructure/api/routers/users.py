@@ -7,6 +7,7 @@ from infrastructure.api.security import get_current_user, verify_team_access
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
+# Fetches the list of members belonging to a specific team.
 @router.get("/team/{team_name}", response_model=List[MemberResponseDTO])
 async def get_team_members(
     team_name: str,
@@ -27,6 +28,7 @@ async def get_team_members(
         for user in db_users
     ]
 
+# Retrieves the members of a specific channel, identifying who has manager privileges.
 @router.get("/channel/{channel_id}", response_model=List[MemberResponseDTO])
 async def get_channel_members(
     channel_id: str,
@@ -40,13 +42,11 @@ async def get_channel_members(
         raise HTTPException(status_code=404, detail="Channel not found")
         
     verify_team_access(channel.team_name, current_user)
-        
+    
     team = team_repo.get_by_id(channel.team_name)
-    managers = team.managers if team else []
-
     db_users = user_repo.get_by_ids(channel.members)
     
     return [
-        map_user_to_member_dto(user, getattr(user, 'email', '') in managers) 
+        map_user_to_member_dto(user, team and getattr(user, 'email', '') in team.managers) 
         for user in db_users
     ]
