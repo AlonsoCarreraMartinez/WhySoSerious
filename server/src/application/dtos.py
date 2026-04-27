@@ -23,6 +23,10 @@ class TeamDashboardResponseDTO(BaseModel):
     exhaustion: int
     cynicism: int
     inefficacy: int
+    wbi: Optional[int] = None
+    wbi_e: Optional[int] = None
+    wbi_c: Optional[int] = None
+    wbi_i: Optional[int] = None
 
 class ChannelDashboardResponseDTO(BaseModel):
     id: str
@@ -35,6 +39,10 @@ class ChannelDashboardResponseDTO(BaseModel):
     exhaustion: int
     cynicism: int
     inefficacy: int
+    wbi: Optional[int] = None
+    wbi_e: Optional[int] = None
+    wbi_c: Optional[int] = None
+    wbi_i: Optional[int] = None
 
 class HistoricalDataPointDTO(BaseModel):
     date: str
@@ -42,6 +50,10 @@ class HistoricalDataPointDTO(BaseModel):
     exhaustion: int
     cynicism: int
     inefficacy: int
+    wbi: Optional[int] = None
+    wbi_e: Optional[int] = None
+    wbi_c: Optional[int] = None
+    wbi_i: Optional[int] = None
 
 class MemberResponseDTO(BaseModel):
     id: str

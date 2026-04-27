@@ -22,12 +22,15 @@ import {
 import { CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
 import { mockHistoricalData } from "@/lib/mock-data"
-import { cn } from "@/lib/utils"
+import { useDashboard } from "@/lib/dashboard-context"
 
 export function HistoricalChart() {
   const [dateRange, setDateRange] = useState<"30days" | "custom">("30days")
   const [startDate, setStartDate] = useState<Date>()
   const [endDate, setEndDate] = useState<Date>()
+  const { isContextMode } = useDashboard()
+
+  const activeKey = isContextMode ? "wbi" : "score"
 
   return (
     <Card>
@@ -107,12 +110,12 @@ export function HistoricalChart() {
               <ReferenceLine y={25} stroke="hsl(48, 96%, 53%)" strokeDasharray="5 5" label={{ value: "Moderate", position: "right", fill: "hsl(48, 96%, 53%)" }} />
               <Line
                 type="monotone"
-                dataKey="score"
+                dataKey={activeKey}
                 stroke="hsl(var(--primary))"
                 strokeWidth={2}
                 dot={{ fill: "hsl(var(--primary))", r: 4 }}
                 activeDot={{ r: 6 }}
-                name="Burnout Score"
+                name={isContextMode ? "WBI Score" : "Burnout Score"}
               />
             </LineChart>
           </ResponsiveContainer>

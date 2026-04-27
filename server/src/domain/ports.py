@@ -188,4 +188,3 @@ class TeamsProvider(ABC):
     @abstractmethod
     def map_to_domain_message(self, data: dict, team_id: str, channel_id: str, parent_id: Optional[str] = None) -> Optional[Message]:
         pass
-    

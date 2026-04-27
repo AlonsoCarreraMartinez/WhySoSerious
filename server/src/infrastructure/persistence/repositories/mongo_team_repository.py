@@ -27,10 +27,9 @@ class MongoTeamRepository(TeamRepository):
         return [Team(**doc) for doc in cursor] # Convert each MongoDB document into a Team model object using unpacking (**).
 
     # Update the team's global scores calculated by the BurnoutService.
-    def update_burnout_metrics(self, team_id: str, scores: MBIScores):
-        
+    def update_burnout_metrics(self, target_id: str, scores: MBIScores):
         self.collection.update_one(
-            {"_id": team_id},
+            {"_id": target_id},
             {"$set": {"burnout_mean": scores.model_dump()}},
             upsert=False 
         )
@@ -42,7 +41,6 @@ class MongoTeamRepository(TeamRepository):
     
     # Fetches all teams where a specific email is listed in the managers array.
     def get_teams_by_manager(self, manager_email: str) -> List[Team]:
-        
         query = {"managers": {"$regex": f"^{manager_email}$", "$options": "i"}}
         cursor = self.collection.find(query)
         return [Team(**doc) for doc in cursor]

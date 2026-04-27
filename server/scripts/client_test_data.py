@@ -14,26 +14,31 @@ if not MONGO_URI:
     exit()
 
 def generate_mock_scores(base_e, base_c, base_i, noise=0.1):
-    """Generates realistic MBI scores based on a target baseline."""
     e = min(max(base_e + random.uniform(-noise, noise), 0.0), 1.0)
     c = min(max(base_c + random.uniform(-noise, noise), 0.0), 1.0)
     i = min(max(base_i + random.uniform(-noise, noise), 0.0), 1.0)
     b_index = (e + c + i) / 3.0
-    wbi = min(b_index * random.uniform(1.0, 1.2), 1.0)
+    
+    wbi_e = min(e * random.uniform(1.0, 1.2), 1.0)
+    wbi_c = min(c * random.uniform(1.0, 1.2), 1.0)
+    wbi_i = min(i * random.uniform(1.0, 1.2), 1.0)
+    wbi = (wbi_e + wbi_c + wbi_i) / 3.0
     
     return {
         "exhaustion": round(e, 2),
         "cynicism": round(c, 2),
         "inefficacy": round(i, 2),
         "burnout_index": round(b_index, 2),
-        "wbi": round(wbi, 2)
+        "wbi": round(wbi, 2),
+        "wbi_e": round(wbi_e, 2),
+        "wbi_c": round(wbi_c, 2),
+        "wbi_i": round(wbi_i, 2)
     }
 
 def seed_test_database():
     client = MongoClient(MONGO_URI)
     db = client[DB_NAME]
 
-    # Clear old data
     db.users.drop()
     db.teams.drop()
     db.channels.drop()
@@ -52,11 +57,10 @@ def seed_test_database():
     ]
     db.users.insert_many(users)
 
-    # Team baseline profiles: (Exhaustion, Cynicism, Inefficacy)
     team_profiles = {
-        "Oviedo": (0.15, 0.10, 0.12),    # Healthy team
-        "La Bañeza": (0.45, 0.40, 0.35), # Medium risk
-        "León": (0.75, 0.80, 0.60)       # High burnout risk
+        "Oviedo": (0.15, 0.10, 0.12),    
+        "La Bañeza": (0.45, 0.40, 0.35), 
+        "León": (0.75, 0.80, 0.60)       
     }
 
     m_oviedo = ["alonso@ww5dl.onmicrosoft.com", "laura.gomez.wss@ww5dl.onmicrosoft.com", "carlos.ruiz.wss@ww5dl.onmicrosoft.com"]
@@ -80,7 +84,10 @@ def seed_test_database():
         {"_id": "León", "managers": ["alonso@ww5dl.onmicrosoft.com"], "visibility": "public", "members": m_leon, "channels": ["19:VoMt5dNfALRG4sqbg-3avl70xUqkAT9CuXkBM27ZrzA1@thread.tacv2", "19:hUXP3MiobZkf1IRRWafix7QRwYTnr-ubRWSSrIC9gyI1@thread.tacv2", "19:7dQijFm6mtNkuN9vqlOXQTu1Nt1g9-yCvqQrDLm9QmE1@thread.tacv2"]}
     ]
 
-    now = datetime.utcnow()
+    start_date = datetime(2026, 3, 1)
+    end_date = datetime(2026, 5, 31)
+    total_days = (end_date - start_date).days
+
     trends = []
     sessions = []
 
@@ -90,8 +97,8 @@ def seed_test_database():
         base_e, base_c, base_i = team_profiles[team["_id"]]
         latest_score = None
         
-        for days_ago in range(30, -1, -2): 
-            trend_date = now - timedelta(days=days_ago)
+        for hours_passed in range(0, total_days * 24 + 1, 6): 
+            trend_date = start_date + timedelta(hours=hours_passed)
             score = generate_mock_scores(base_e, base_c, base_i)
             latest_score = score
             trends.append({
@@ -109,9 +116,8 @@ def seed_test_database():
         base_e, base_c, base_i = team_profiles[team_name]
         latest_score = None
 
-        
-        for days_ago in range(30, -1, -2):
-            trend_date = now - timedelta(days=days_ago)
+        for hours_passed in range(0, total_days * 24 + 1, 6):
+            trend_date = start_date + timedelta(hours=hours_passed)
             score = generate_mock_scores(base_e, base_c, base_i)
             latest_score = score
             trends.append({
@@ -122,10 +128,11 @@ def seed_test_database():
             })
         
         chan["burnout_mean"] = latest_score
-        chan["description"] = f"Canal {chan['name']} para {team_name}"
+        chan["description"] = None
 
-        for i in range(5):
-            session_start = now - timedelta(hours=random.randint(1, 48))
+        for i in range(15):
+            random_days = random.randint(0, total_days)
+            session_start = start_date + timedelta(days=random_days, hours=random.randint(8, 20))
             session_end = session_start + timedelta(minutes=random.randint(5, 60))
             msg_count = random.randint(3, 40)
             

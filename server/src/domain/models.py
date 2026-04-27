@@ -6,7 +6,10 @@ class MBIScores(BaseModel):
     cynicism: float       
     inefficacy: float    
     burnout_index: float 
-    wbi: Optional[float] = None 
+    wbi: Optional[float] = None
+    wbi_e: Optional[float] = None 
+    wbi_c: Optional[float] = None 
+    wbi_i: Optional[float] = None 
 
 class User(BaseModel):
     email: str = Field(alias="_id")

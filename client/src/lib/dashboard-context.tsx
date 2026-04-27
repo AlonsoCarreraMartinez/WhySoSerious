@@ -23,9 +23,11 @@ interface DashboardContextType {
   authMessage: string
   selectedTeamId: string | null
   selectedChannelId: string | null
+  isContextMode: boolean
   navigateToDashboard: () => void
   navigateToTeam: (teamId: string) => void
   navigateToChannel: (channelId: string) => void
+  toggleContextMode: () => void
 }
 
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined)
@@ -34,12 +36,12 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [currentView, setCurrentView] = useState<ViewState>("dashboard")
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null)
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null)
-
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const [userRole, setUserRole] = useState<UserRole>("none")
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [inOrg, setInOrg] = useState(false)
   const [authMessage, setAuthMessage] = useState("")
+  const [isContextMode, setIsContextMode] = useState(false)
 
   useEffect(() => {
     const initTeamsAndAuth = async () => {
@@ -122,12 +124,14 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     setSelectedChannelId(channelId)
     setCurrentView("channel")
   }
+  const toggleContextMode = () => setIsContextMode((prev) => !prev)
 
   return (
     <DashboardContext.Provider
       value={{
         currentView, userRole, currentUser, isCheckingAuth, inOrg, authMessage,
-        selectedTeamId, selectedChannelId, navigateToDashboard, navigateToTeam, navigateToChannel,
+        selectedTeamId, selectedChannelId, isContextMode, navigateToDashboard, 
+        navigateToTeam, navigateToChannel, toggleContextMode,
       }}
     >
       {children}

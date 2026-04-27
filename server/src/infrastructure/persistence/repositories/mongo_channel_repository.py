@@ -17,12 +17,11 @@ class MongoChannelRepository(ChannelRepository):
         return [Channel(**doc) for doc in cursor] # Convert each MongoDB document into a Channel model object using unpacking (**).
 
     # Update the specific channel's scores calculated by the AI.
-    def update_burnout_metrics(self, channel_id: str, scores: MBIScores):
-        
+    def update_burnout_metrics(self, target_id: str, scores: MBIScores):
         self.collection.update_one(
-            {"_id": channel_id},
+            {"_id": target_id},
             {"$set": {"burnout_mean": scores.model_dump()}},
-            upsert=False
+            upsert=False 
         )
 
     # Fetches all channels stored in the database.

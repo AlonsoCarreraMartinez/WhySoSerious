@@ -38,8 +38,7 @@ class BurnoutService:
             end_t = datetime.strptime(end_time_str[:19] + "Z", fmt)
             
             duration_minutes = (end_t - start_t).total_seconds() / 60.0
-            if duration_minutes <= 0:
-                duration_minutes = 1.0 
+            duration_minutes = max(1.0, duration_minutes) 
         except Exception:
             start_t = datetime.utcnow()
             duration_minutes = 1.0
@@ -48,15 +47,15 @@ class BurnoutService:
         is_weekend = start_t.weekday() >= 5 
         
         if is_weekend:
-            overtime_factor = 0.15  # Early morning or weekend.
-        elif hour < 8 or hour >= 20:
-            overtime_factor = 0.10  # Evening or night.
+            overtime_factor = 1.2 
+        elif hour < 8 or hour >= 18:
+            overtime_factor = 1.1 
         else:
-            overtime_factor = 0.0  # Working hours.
+            overtime_factor = 1.0 
 
         density = round(message_count / duration_minutes, 2)
 
-        latency = round(duration_minutes / message_count, 2) if message_count > 0 else 0.0
+        latency = round(duration_minutes / (message_count - 1), 2) if message_count > 1 else 0.0
 
         return overtime_factor, density, latency, duration_minutes
 
@@ -119,12 +118,13 @@ class BurnoutService:
                 start_time, end_time, message_count
             )
 
-            latency_penalty = 0.10 if latency_f > 120.0 else 0.0
-            density_penalty = 0.10 if duration_mins >= 10.0 and density_f > 3.0 else 0.0
+            overtime_penalty = round(overtime_f - 1.0, 2)
+            density_penalty = min(0.30, density_f * 0.05)
+            latency_penalty = min(0.30, latency_f * 0.002)
 
-            wbi_e = min(1.0, e_val + overtime_f)
-            wbi_c = min(1.0, c_val + latency_penalty)
-            wbi_i = min(1.0, i_val + density_penalty)
+            wbi_e = round(e_val + ((1.0 - e_val) * min(1.0, overtime_penalty + density_penalty)), 2)
+            wbi_c = round(c_val + ((1.0 - c_val) * latency_penalty), 2)
+            wbi_i = round(i_val + ((1.0 - i_val) * density_penalty), 2)
 
             wbi_final = round((wbi_e + wbi_c + wbi_i) / 3.0, 2)
 
@@ -133,7 +133,10 @@ class BurnoutService:
                 cynicism=c_val,
                 inefficacy=i_val,
                 burnout_index=b_index,
-                wbi=wbi_final
+                wbi=wbi_final,
+                wbi_e=wbi_e,
+                wbi_c=wbi_c,
+                wbi_i=wbi_i
             )
             
             session = ConversationSession(
@@ -158,7 +161,7 @@ class BurnoutService:
         self.update_global_scores()
         print("Analysis complete.")
 
-    # Calculate true mathematical means using Sessions (Not individual messages).
+    # Calculate mathematical means using Sessions.
     def update_global_scores(self):
         teams = self.team_repo.get_all()
 
@@ -169,7 +172,7 @@ class BurnoutService:
             if not channels:
                 continue
                 
-            team_sums = {"e": 0.0, "c": 0.0, "i": 0.0, "b": 0.0, "w": 0.0}
+            team_sums = {"e": 0.0, "c": 0.0, "i": 0.0, "b": 0.0, "w": 0.0, "we": 0.0, "wc": 0.0, "wi": 0.0}
             team_session_count = 0
 
             for channel in channels:
@@ -179,7 +182,7 @@ class BurnoutService:
                 if not sessions:
                     continue
 
-                chan_sums = {"e": 0.0, "c": 0.0, "i": 0.0, "b": 0.0, "w": 0.0}
+                chan_sums = {"e": 0.0, "c": 0.0, "i": 0.0, "b": 0.0, "w": 0.0, "we": 0.0, "wc": 0.0, "wi": 0.0}
                 valid_chan_sessions = 0
                 
                 for s in sessions:
@@ -188,7 +191,11 @@ class BurnoutService:
                         chan_sums["c"] += s.sessionScores.cynicism
                         chan_sums["i"] += s.sessionScores.inefficacy
                         chan_sums["b"] += s.sessionScores.burnout_index
-                        chan_sums["w"] += s.sessionScores.wbi or 0.0 
+                        chan_sums["w"] += getattr(s.sessionScores, 'wbi', 0.0) or 0.0 
+                        chan_sums["we"] += getattr(s.sessionScores, 'wbi_e', s.sessionScores.exhaustion) or 0.0
+                        chan_sums["wc"] += getattr(s.sessionScores, 'wbi_c', s.sessionScores.cynicism) or 0.0
+                        chan_sums["wi"] += getattr(s.sessionScores, 'wbi_i', s.sessionScores.inefficacy) or 0.0
+                        
                         valid_chan_sessions += 1
 
                 if valid_chan_sessions > 0:
@@ -197,7 +204,10 @@ class BurnoutService:
                         cynicism=round(chan_sums["c"] / valid_chan_sessions, 2),
                         inefficacy=round(chan_sums["i"] / valid_chan_sessions, 2),
                         burnout_index=round(chan_sums["b"] / valid_chan_sessions, 2),
-                        wbi=round(chan_sums["w"] / valid_chan_sessions, 2) 
+                        wbi=round(chan_sums["w"] / valid_chan_sessions, 2),
+                        wbi_e=round(chan_sums["we"] / valid_chan_sessions, 2),
+                        wbi_c=round(chan_sums["wc"] / valid_chan_sessions, 2),
+                        wbi_i=round(chan_sums["wi"] / valid_chan_sessions, 2)
                     )
                     
                     self.channel_repo.update_burnout_metrics(channel.id, mean_chan)
@@ -221,6 +231,10 @@ class BurnoutService:
                     team_sums["i"] += chan_sums["i"]
                     team_sums["b"] += chan_sums["b"]
                     team_sums["w"] += chan_sums["w"]
+                    team_sums["we"] += chan_sums["we"]
+                    team_sums["wc"] += chan_sums["wc"]
+                    team_sums["wi"] += chan_sums["wi"]
+
                     team_session_count += valid_chan_sessions
 
             if team_session_count > 0:
@@ -229,7 +243,10 @@ class BurnoutService:
                     cynicism=round(team_sums["c"] / team_session_count, 2),
                     inefficacy=round(team_sums["i"] / team_session_count, 2),
                     burnout_index=round(team_sums["b"] / team_session_count, 2),
-                    wbi=round(team_sums["w"] / team_session_count, 2) 
+                    wbi=round(team_sums["w"] / team_session_count, 2),
+                    wbi_e=round(team_sums["we"] / team_session_count, 2),
+                    wbi_c=round(team_sums["wc"] / team_session_count, 2),
+                    wbi_i=round(team_sums["wi"] / team_session_count, 2)
                 )
                 
                 self.team_repo.update_burnout_metrics(team.name, mean_team)

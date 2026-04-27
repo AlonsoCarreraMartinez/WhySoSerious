@@ -39,7 +39,7 @@ function VisibilityBadge({ visibility }: { visibility: string }) {
 }
 
 export function ChannelDetail() {
-  const { selectedChannelId, navigateToDashboard, navigateToTeam } = useDashboard()
+  const { selectedChannelId, navigateToDashboard, navigateToTeam, isContextMode } = useDashboard()
   const [startDate, setStartDate] = useState<Date>()
   const [endDate, setEndDate] = useState<Date>()
   const loadedChannelId = useRef<string | null>(null)
@@ -78,10 +78,14 @@ export function ChannelDetail() {
 
           const formattedHistory = (fetchedHistory || []).map((point: any) => ({
             date: point.date,
+            overall: point.score || 0,
             exhaustion: point.exhaustion || 0,
             cynicism: point.cynicism || 0,
             inefficacy: point.inefficacy || 0,
-            overall: point.score || 0
+            wbi: point.wbi || point.score || 0,
+            wbi_e: point.wbi_e || point.exhaustion || 0,
+            wbi_c: point.wbi_c || point.cynicism || 0,
+            wbi_i: point.wbi_i || point.inefficacy || 0
           }))
 
           setDimensionHistory(formattedHistory)
@@ -97,10 +101,14 @@ export function ChannelDetail() {
 
           const formattedHistory = (fetchedHistory || []).map((point: any) => ({
             date: point.date,
+            overall: point.score || 0,
             exhaustion: point.exhaustion || 0,
             cynicism: point.cynicism || 0,
             inefficacy: point.inefficacy || 0,
-            overall: point.score || 0
+            wbi: point.wbi || point.score || 0,
+            wbi_e: point.wbi_e || point.exhaustion || 0,
+            wbi_c: point.wbi_c || point.cynicism || 0,
+            wbi_i: point.wbi_i || point.inefficacy || 0
           }))
           
           setDimensionHistory(formattedHistory)
@@ -172,11 +180,11 @@ export function ChannelDetail() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <BurnoutGauge score={channel.burnoutScore} title="Channel Burnout Score" />
+        <BurnoutGauge score={isContextMode ? (channel.wbi ?? channel.burnoutScore) : channel.burnoutScore} title="Channel Burnout Score" />
         <BurnoutRadarChart
-          exhaustion={channel.exhaustion}
-          cynicism={channel.cynicism}
-          inefficacy={channel.inefficacy}
+          exhaustion={isContextMode ? (channel.wbi_e ?? channel.exhaustion) : channel.exhaustion}
+          cynicism={isContextMode ? (channel.wbi_c ?? channel.cynicism) : channel.cynicism}
+          inefficacy={isContextMode ? (channel.wbi_i ?? channel.inefficacy) : channel.inefficacy}
           title="Burnout Dimensions"
         />
       </div>
@@ -293,7 +301,7 @@ export function ChannelDetail() {
                           <ReferenceLine y={50} yAxisId="left" stroke="hsl(25, 95%, 53%)" strokeDasharray="5 5" label={{ value: "High", position: "right", fill: "hsl(25, 95%, 53%)", fontSize: 11 }} />
                           <ReferenceLine y={25} yAxisId="left" stroke="hsl(48, 96%, 53%)" strokeDasharray="5 5" label={{ value: "Moderate", position: "right", fill: "hsl(48, 96%, 40%)", fontSize: 11 }} />
                           <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }} />
-                          <Area type="monotone" dataKey="overall" stroke="hsl(var(--primary))" fill="url(#colorOverallChan)" strokeWidth={3} dot={{ r: 4 }} name="Overall Score" yAxisId="left" />
+                          <Area type="monotone" dataKey={isContextMode ? "wbi" : "overall"} stroke="hsl(var(--primary))" fill="url(#colorOverallChan)" strokeWidth={3} dot={{ r: 4 }} name="Overall Score" yAxisId="left" />
                         </AreaChart>
                       </ResponsiveContainer>
                     </div>
@@ -369,9 +377,9 @@ export function ChannelDetail() {
                           <ReferenceLine y={25} yAxisId="left" stroke="hsl(48, 96%, 53%)" strokeDasharray="5 5" label={{ value: "Moderate", position: "right", fill: "hsl(48, 96%, 40%)", fontSize: 11 }} />
                           <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }} />
                           <Legend />
-                          <Line type="monotone" dataKey="exhaustion" stroke="hsl(280, 65%, 60%)" strokeWidth={2} dot={{ r: 4 }} yAxisId="left" />
-                          <Line type="monotone" dataKey="cynicism" stroke="hsl(210, 80%, 50%)" strokeWidth={2} dot={{ r: 4 }} yAxisId="left" />
-                          <Line type="monotone" dataKey="inefficacy" stroke="hsl(180, 70%, 45%)" strokeWidth={2} dot={{ r: 4 }} yAxisId="left" />
+                          <Line type="monotone" dataKey={isContextMode ? "wbi_e" : "exhaustion"} stroke="hsl(280, 65%, 60%)" strokeWidth={2} dot={{ r: 4 }} yAxisId="left" name="Exhaustion" />
+                          <Line type="monotone" dataKey={isContextMode ? "wbi_c" : "cynicism"} stroke="hsl(210, 80%, 50%)" strokeWidth={2} dot={{ r: 4 }} yAxisId="left" name="Cynicism" />
+                          <Line type="monotone" dataKey={isContextMode ? "wbi_i" : "inefficacy"} stroke="hsl(180, 70%, 45%)" strokeWidth={2} dot={{ r: 4 }} yAxisId="left" name="Inefficacy" />
                         </LineChart>
                       </ResponsiveContainer>
                     </div>

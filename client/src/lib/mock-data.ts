@@ -1,7 +1,11 @@
-// Mock data for the burnout detection dashboard
-
 export type BurnoutLevel = "critical" | "high" | "moderate" | "low"
 export type Visibility = "public" | "private" | "org-wide" | "shared"
+
+export interface ContextMetrics {
+  avg_overtime: number
+  avg_density: number
+  avg_latency: number
+}
 
 export interface Team {
   id: string
@@ -13,6 +17,11 @@ export interface Team {
   exhaustion: number
   cynicism: number
   inefficacy: number
+  wbi?: number
+  wbi_e?: number
+  wbi_c?: number
+  wbi_i?: number
+  context?: ContextMetrics
 }
 
 export interface Channel {
@@ -26,6 +35,11 @@ export interface Channel {
   exhaustion: number
   cynicism: number
   inefficacy: number
+  wbi?: number
+  wbi_e?: number
+  wbi_c?: number
+  wbi_i?: number
+  context?: ContextMetrics
 }
 
 export interface ManagedTeam {
@@ -81,6 +95,10 @@ export interface Notification {
 export interface HistoricalDataPoint {
   date: string
   score: number
+  wbi?: number
+  exhaustion?: number
+  cynicism?: number
+  inefficacy?: number
 }
 
 export function getBurnoutLevel(score: number): BurnoutLevel {
@@ -140,7 +158,6 @@ export const mockChannels: Channel[] = [
   { id: "c8", teamId: "6", name: "general", visibility: "public", memberCount: 5, burnoutScore: 15, burnoutLevel: "low", exhaustion: 18, cynicism: 12, inefficacy: 15 },
 ]
 
-// Historical data per team for the 30-day trend chart
 export interface TeamHistoricalData {
   date: string
   [teamId: string]: number | string
@@ -156,7 +173,6 @@ export const mockTeamHistoricalData: TeamHistoricalData[] = [
   { date: "Mar 25", "1": 82, "2": 68, "3": 55, "4": 42, "5": 35 },
 ]
 
-// Historical data for individual teams/channels over time with dimensions
 export interface DimensionHistoricalData {
   date: string
   exhaustion: number

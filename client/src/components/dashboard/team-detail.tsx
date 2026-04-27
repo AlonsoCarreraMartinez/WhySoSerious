@@ -32,7 +32,7 @@ function VisibilityBadge({ visibility }: { visibility: string }) {
 }
 
 export function TeamDetail() {
-  const { selectedTeamId, navigateToDashboard, navigateToChannel } = useDashboard()
+  const { selectedTeamId, navigateToDashboard, navigateToChannel, isContextMode } = useDashboard()
   const [startDate, setStartDate] = useState<Date>()
   const [endDate, setEndDate] = useState<Date>()
   const [channelSearchQuery, setChannelSearchQuery] = useState("")
@@ -75,10 +75,14 @@ export function TeamDetail() {
 
           const formattedHistory = (fetchedHistory || []).map((point: any) => ({
             date: point.date,
+            overall: point.score || 0,
             exhaustion: point.exhaustion || 0,
             cynicism: point.cynicism || 0,
             inefficacy: point.inefficacy || 0,
-            overall: point.score || 0
+            wbi: point.wbi || point.score || 0,
+            wbi_e: point.wbi_e || point.exhaustion || 0,
+            wbi_c: point.wbi_c || point.cynicism || 0,
+            wbi_i: point.wbi_i || point.inefficacy || 0
           }))
 
           setDimensionHistory(formattedHistory)
@@ -96,10 +100,14 @@ export function TeamDetail() {
 
           const formattedHistory = (fetchedHistory || []).map((point: any) => ({
             date: point.date,
+            overall: point.score || 0,
             exhaustion: point.exhaustion || 0,
             cynicism: point.cynicism || 0,
             inefficacy: point.inefficacy || 0,
-            overall: point.score || 0
+            wbi: point.wbi || point.score || 0,
+            wbi_e: point.wbi_e || point.exhaustion || 0,
+            wbi_c: point.wbi_c || point.cynicism || 0,
+            wbi_i: point.wbi_i || point.inefficacy || 0
           }))
           
           setDimensionHistory(formattedHistory)
@@ -166,11 +174,11 @@ export function TeamDetail() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <BurnoutGauge score={team.burnoutScore} title="Team Burnout Mean" />
+        <BurnoutGauge score={isContextMode ? (team.wbi ?? team.burnoutScore) : team.burnoutScore} title="Team Burnout Mean" />
         <BurnoutRadarChart
-          exhaustion={team.exhaustion}
-          cynicism={team.cynicism}
-          inefficacy={team.inefficacy}
+          exhaustion={isContextMode ? (team.wbi_e ?? team.exhaustion) : team.exhaustion}
+          cynicism={isContextMode ? (team.wbi_c ?? team.cynicism) : team.cynicism}
+          inefficacy={isContextMode ? (team.wbi_i ?? team.inefficacy) : team.inefficacy}
           title="Burnout Dimensions Comparison"
         />
       </div>
@@ -208,7 +216,7 @@ export function TeamDetail() {
                       name={channel.name}
                       visibility={channel.visibility}
                       memberCount={channel.memberCount}
-                      burnoutScore={channel.burnoutScore}
+                      burnoutScore={isContextMode ? (channel.wbi ?? channel.burnoutScore) : channel.burnoutScore}
                       burnoutLevel={channel.burnoutLevel}
                       onClick={() => navigateToChannel(channel.id)}
                     />
@@ -333,7 +341,7 @@ export function TeamDetail() {
                           <ReferenceLine y={50} yAxisId="left" stroke="hsl(25, 95%, 53%)" strokeDasharray="5 5" label={{ value: "High", position: "right", fill: "hsl(25, 95%, 53%)", fontSize: 11 }} />
                           <ReferenceLine y={25} yAxisId="left" stroke="hsl(48, 96%, 53%)" strokeDasharray="5 5" label={{ value: "Moderate", position: "right", fill: "hsl(48, 96%, 40%)", fontSize: 11 }} />
                           <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }} />
-                          <Area type="monotone" dataKey="overall" stroke="hsl(var(--primary))" fill="url(#colorOverall)" strokeWidth={3} dot={{ r: 4 }} name="Overall Score" yAxisId="left" />
+                          <Area type="monotone" dataKey={isContextMode ? "wbi" : "overall"} stroke="hsl(var(--primary))" fill="url(#colorOverall)" strokeWidth={3} dot={{ r: 4 }} name="Overall Score" yAxisId="left" />
                         </AreaChart>
                       </ResponsiveContainer>
                     </div>
@@ -411,9 +419,9 @@ export function TeamDetail() {
                           <ReferenceLine y={25} yAxisId="left" stroke="hsl(48, 96%, 53%)" strokeDasharray="5 5" label={{ value: "Moderate", position: "right", fill: "hsl(48, 96%, 40%)", fontSize: 11 }} />
                           <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }} />
                           <Legend />
-                          <Line type="monotone" dataKey="exhaustion" stroke="hsl(280, 65%, 60%)" strokeWidth={2} dot={{ r: 4 }} yAxisId="left" />
-                          <Line type="monotone" dataKey="cynicism" stroke="hsl(210, 80%, 50%)" strokeWidth={2} dot={{ r: 4 }} yAxisId="left" />
-                          <Line type="monotone" dataKey="inefficacy" stroke="hsl(180, 70%, 45%)" strokeWidth={2} dot={{ r: 4 }} yAxisId="left" />
+                          <Line type="monotone" dataKey={isContextMode ? "wbi_e" : "exhaustion"} stroke="hsl(280, 65%, 60%)" strokeWidth={2} dot={{ r: 4 }} yAxisId="left" name="Exhaustion" />
+                          <Line type="monotone" dataKey={isContextMode ? "wbi_c" : "cynicism"} stroke="hsl(210, 80%, 50%)" strokeWidth={2} dot={{ r: 4 }} yAxisId="left" name="Cynicism" />
+                          <Line type="monotone" dataKey={isContextMode ? "wbi_i" : "inefficacy"} stroke="hsl(180, 70%, 45%)" strokeWidth={2} dot={{ r: 4 }} yAxisId="left" name="Inefficacy" />
                         </LineChart>
                       </ResponsiveContainer>
                     </div>

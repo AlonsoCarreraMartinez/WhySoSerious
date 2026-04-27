@@ -59,7 +59,6 @@ class SyncService:
                     
                     self.message_repo.save(msg)
 
-        # Notify observers when sync is fully completed.
         for obs in self.observers:
             obs.on_sync_completed(total_new_messages)
 

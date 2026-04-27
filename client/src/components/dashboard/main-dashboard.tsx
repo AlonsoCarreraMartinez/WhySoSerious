@@ -20,7 +20,7 @@ import { useDashboard } from "../../lib/dashboard-context"
 import { Search } from "lucide-react"
 
 import { api } from "../../lib/api"
-import { Team, Channel } from "../../lib/mock-data"
+import { Team, Channel, getBurnoutLevel } from "@/lib/mock-data"
 
 const CHART_COLORS = [
   "hsl(280, 65%, 60%)",  
@@ -31,7 +31,7 @@ const CHART_COLORS = [
 ]
 
 export function MainDashboard() {
-  const { navigateToTeam, navigateToChannel, currentUser, userRole } = useDashboard()
+  const { navigateToTeam, navigateToChannel, currentUser, userRole, isContextMode } = useDashboard()
   const [teamSearch, setTeamSearch] = useState("")
 
   const [teams, setTeams] = useState<Team[]>([])
@@ -63,7 +63,7 @@ export function MainDashboard() {
         setTeams(fetchedTeams)
         setChannels(fetchedChannels)
 
-        const top5Teams = fetchedTeams.slice(0, 5)
+        const top5Teams = [...fetchedTeams].sort((a, b) => b.burnoutScore - a.burnoutScore).slice(0, 5)
 
         if (top5Teams.length > 0) {
           const historyPromises = top5Teams.map(t => api.getHistoricalData(t.id))
@@ -78,6 +78,7 @@ export function MainDashboard() {
                 mergedByDate[point.date] = { date: point.date }
               }
               mergedByDate[point.date][teamId] = point.score
+              mergedByDate[point.date][`${teamId}_wbi`] = point.wbi || point.score
             })
           })
 
@@ -103,15 +104,21 @@ export function MainDashboard() {
     }
   }, [currentUser, userRole])
 
-  const topTeams = useMemo(() => 
-    [...teams].sort((a, b) => b.burnoutScore - a.burnoutScore).slice(0, 5),
-    [teams]
-  )
+  const topTeams = useMemo(() => {
+    return [...teams].sort((a, b) => {
+      const scoreA = isContextMode ? (a.wbi ?? a.burnoutScore) : a.burnoutScore;
+      const scoreB = isContextMode ? (b.wbi ?? b.burnoutScore) : b.burnoutScore;
+      return scoreB - scoreA;
+    }).slice(0, 5)
+  }, [teams, isContextMode])
 
-  const topChannels = useMemo(() =>
-    [...channels].sort((a, b) => b.burnoutScore - a.burnoutScore).slice(0, 5),
-    [channels]
-  )
+  const topChannels = useMemo(() => {
+    return [...channels].sort((a, b) => {
+      const scoreA = isContextMode ? (a.wbi ?? a.burnoutScore) : a.burnoutScore;
+      const scoreB = isContextMode ? (b.wbi ?? b.burnoutScore) : b.burnoutScore;
+      return scoreB - scoreA;
+    }).slice(0, 5)
+  }, [channels, isContextMode])
 
   const allTeamsSorted = useMemo(() =>
     [...teams].sort((a, b) => a.name.localeCompare(b.name)),
@@ -152,18 +159,21 @@ export function MainDashboard() {
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             {topTeams.length > 0 ? (
-              topTeams.map((team, index) => (
-                <BurnoutCard
-                  key={team.id}
-                  name={team.name}
-                  visibility={team.visibility}
-                  memberCount={team.memberCount}
-                  burnoutScore={team.burnoutScore}
-                  burnoutLevel={team.burnoutLevel}
-                  rank={index + 1}
-                  onClick={() => navigateToTeam(team.id)}
-                />
-              ))
+              topTeams.map((team, index) => {
+                const displayScore = isContextMode ? (team.wbi ?? team.burnoutScore) : team.burnoutScore;
+                return (
+                  <BurnoutCard
+                    key={team.id}
+                    name={team.name}
+                    visibility={team.visibility}
+                    memberCount={team.memberCount}
+                    burnoutScore={displayScore}
+                    burnoutLevel={getBurnoutLevel(displayScore)}
+                    rank={index + 1}
+                    onClick={() => navigateToTeam(team.id)}
+                  />
+                )
+              })
             ) : (
               <p className="text-sm text-muted-foreground">No teams to display.</p>
             )}
@@ -179,18 +189,21 @@ export function MainDashboard() {
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             {topChannels.length > 0 ? (
-              topChannels.map((channel, index) => (
-                <BurnoutCard
-                  key={channel.id}
-                  name={channel.name}
-                  visibility={channel.visibility}
-                  memberCount={channel.memberCount}
-                  burnoutScore={channel.burnoutScore}
-                  burnoutLevel={channel.burnoutLevel}
-                  rank={index + 1}
-                  onClick={() => navigateToChannel(channel.id)}
-                />
-              ))
+              topChannels.map((channel, index) => {
+                const displayScore = isContextMode ? (channel.wbi ?? channel.burnoutScore) : channel.burnoutScore;
+                return (
+                  <BurnoutCard
+                    key={channel.id}
+                    name={channel.name}
+                    visibility={channel.visibility}
+                    memberCount={channel.memberCount}
+                    burnoutScore={displayScore}
+                    burnoutLevel={getBurnoutLevel(displayScore)}
+                    rank={index + 1}
+                    onClick={() => navigateToChannel(channel.id)}
+                  />
+                )
+              })
             ) : (
               <p className="text-sm text-muted-foreground">No channels to display.</p>
             )}
@@ -270,7 +283,7 @@ export function MainDashboard() {
                             <Line
                               key={team.id}
                               type="monotone"
-                              dataKey={team.id}
+                              dataKey={isContextMode ? `${team.id}_wbi` : team.id}
                               stroke={CHART_COLORS[index % CHART_COLORS.length]}
                               strokeWidth={2}
                               dot={{ fill: CHART_COLORS[index % CHART_COLORS.length], r: 3 }}
@@ -324,17 +337,20 @@ export function MainDashboard() {
                   </span>
                 </div>
                 <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                  {filteredTeams.map((team) => (
-                    <BurnoutCard
-                      key={team.id}
-                      name={team.name}
-                      visibility={team.visibility}
-                      memberCount={team.memberCount}
-                      burnoutScore={team.burnoutScore}
-                      burnoutLevel={team.burnoutLevel}
-                      onClick={() => navigateToTeam(team.id)}
-                    />
-                  ))}
+                  {filteredTeams.map((team) => {
+                    const displayScore = isContextMode ? (team.wbi ?? team.burnoutScore) : team.burnoutScore;
+                    return (
+                      <BurnoutCard
+                        key={team.id}
+                        name={team.name}
+                        visibility={team.visibility}
+                        memberCount={team.memberCount}
+                        burnoutScore={displayScore}
+                        burnoutLevel={getBurnoutLevel(displayScore)}
+                        onClick={() => navigateToTeam(team.id)}
+                      />
+                    )
+                  })}
                 </div>
                 {filteredTeams.length === 0 && (
                   <div className="py-8 text-center text-muted-foreground">

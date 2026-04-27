@@ -1,6 +1,6 @@
 "use client"
 
-import { Bell, ChevronDown, Globe, Eye, EyeOff, Info } from "lucide-react"
+import { Bell, ChevronDown, Globe, Eye, EyeOff, Info, BrainCircuit, Zap } from "lucide-react"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import {
@@ -46,7 +46,7 @@ export function Header() {
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [notifications, setNotifications] = useState<AppNotification[]>([])
   
-  const { currentUser } = useDashboard()
+  const { currentUser, isContextMode, toggleContextMode } = useDashboard()
 
   useEffect(() => {
     if (currentUser?.email) {
@@ -104,9 +104,23 @@ export function Header() {
       </div>
 
       <div className="flex items-center gap-4">
+        <Button
+          variant={isContextMode ? "default" : "outline"}
+          size="sm"
+          className="gap-2 transition-all"
+          onClick={toggleContextMode}
+        >
+          {isContextMode ? <BrainCircuit className="h-4 w-4 animate-pulse" /> : <Zap className="h-4 w-4 text-muted-foreground" />}
+          {isContextMode ? "Context Mode: ON" : "Context Mode: OFF"}
+        </Button>
+
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="text-muted-foreground hover:bg-accent hover:text-foreground data-[state=open]:bg-accent data-[state=open]:text-foreground focus-visible:ring-0"
+            >
               <Info className="h-5 w-5" />
               <span className="sr-only">MBI Information</span>
             </Button>
@@ -154,7 +168,7 @@ export function Header() {
         <Button
           variant="ghost"
           size="icon"
-          className="relative"
+          className="relative text-muted-foreground hover:bg-accent hover:text-foreground"
           onClick={() => handleOpenChange(true)}
           aria-label={`Notifications, ${unreadCount} unread`}
         >
@@ -171,7 +185,7 @@ export function Header() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex items-center gap-2">
+            <Button variant="ghost" className="flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-accent">
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-primary text-primary-foreground">{initials}</AvatarFallback>
               </Avatar>
