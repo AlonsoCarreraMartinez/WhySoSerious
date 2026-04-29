@@ -10,7 +10,6 @@ MONGO_URI = os.getenv("MONGO_URI")
 DB_NAME = "whysoserious_db"
 
 if not MONGO_URI:
-    print("Error: MONGO_URI not found.")
     exit()
 
 def generate_mock_scores(base_e, base_c, base_i, noise=0.1):
@@ -24,16 +23,27 @@ def generate_mock_scores(base_e, base_c, base_i, noise=0.1):
     wbi_i = min(i * random.uniform(1.0, 1.2), 1.0)
     wbi = (wbi_e + wbi_c + wbi_i) / 3.0
     
-    return {
+    mbi = {
         "exhaustion": round(e, 2),
         "cynicism": round(c, 2),
         "inefficacy": round(i, 2),
-        "burnout_index": round(b_index, 2),
+        "burnout_index": round(b_index, 2)
+    }
+    
+    wbi_scores = {
         "wbi": round(wbi, 2),
         "wbi_e": round(wbi_e, 2),
         "wbi_c": round(wbi_c, 2),
         "wbi_i": round(wbi_i, 2)
     }
+    
+    context = {
+        "avg_overtime": random.choice([1.0, 1.1, 1.2]),
+        "avg_density": round(random.uniform(0.5, 3.5), 2),
+        "avg_latency": round(random.uniform(2.0, 15.0), 2)
+    }
+    
+    return mbi, wbi_scores, context
 
 def seed_test_database():
     client = MongoClient(MONGO_URI)
@@ -46,7 +56,6 @@ def seed_test_database():
     db.sessions.drop()  
     db.trends.drop()    
 
-    print("Populating Users...")
     users = [
         {"_id": "alonso@ww5dl.onmicrosoft.com", "name": "Alonso Carrera", "role": "admin", "managed_teams": ["Oviedo", "La Bañeza", "León"], "teams": ["Oviedo", "La Bañeza", "León"]},
         {"_id": "laura.gomez.wss@ww5dl.onmicrosoft.com", "name": "Laura Gómez", "role": "employee", "managed_teams": ["Oviedo"], "teams": ["Oviedo"]},
@@ -67,7 +76,6 @@ def seed_test_database():
     m_banneza = ["alonso@ww5dl.onmicrosoft.com", "elena.martinez.wss@ww5dl.onmicrosoft.com", "sara.prieto.wss@ww5dl.onmicrosoft.com"]
     m_leon = ["alonso@ww5dl.onmicrosoft.com", "elena.martinez.wss@ww5dl.onmicrosoft.com", "david.castro.wss@ww5dl.onmicrosoft.com"]
 
-    print("Populating Channels and Teams with Burnout Means...")
     channels_data = [
         {"_id": "19:fekKOuCfsS_r80LHqVBX-e2a9d-AOgTgzRBz8_SY_zQ1@thread.tacv2", "name": "General", "team_name": "Oviedo", "visibility": "public", "channel_type": "chat", "members": m_oviedo},
         {"_id": "19:d620251b96a1462bbc37ff231346e03a@thread.tacv2", "name": "Backlogs", "team_name": "Oviedo", "visibility": "public", "channel_type": "post", "members": m_oviedo},
@@ -90,51 +98,70 @@ def seed_test_database():
 
     trends = []
     sessions = []
-
-    print("Generating Historical Trends & Sessions...")
+    descriptions = [None, "Main sync channel", "Daily standups and logs", None, "General project discussion"]
 
     for team in teams_data:
         base_e, base_c, base_i = team_profiles[team["_id"]]
-        latest_score = None
+        latest_mbi = None
+        latest_wbi = None
+        latest_ctx = None
         
         for hours_passed in range(0, total_days * 24 + 1, 6): 
             trend_date = start_date + timedelta(hours=hours_passed)
-            score = generate_mock_scores(base_e, base_c, base_i)
-            latest_score = score
+            mbi, wbi, ctx = generate_mock_scores(base_e, base_c, base_i)
+            latest_mbi = mbi
+            latest_wbi = wbi
+            latest_ctx = ctx
+            
             trends.append({
                 "targetId": team["_id"],
                 "type": "team",
                 "date": trend_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "score": score
+                "score": mbi,
+                "wbi": wbi,
+                "context": ctx
             })
         
-        team["burnout_mean"] = latest_score 
+        team["burnout_mean"] = latest_mbi 
+        team["wbi_scores"] = latest_wbi
+        team["context_metrics"] = latest_ctx
+        team["description"] = random.choice(descriptions)
 
-    
     for chan in channels_data:
         team_name = chan["team_name"]
         base_e, base_c, base_i = team_profiles[team_name]
-        latest_score = None
+        latest_mbi = None
+        latest_wbi = None
+        latest_ctx = None
 
         for hours_passed in range(0, total_days * 24 + 1, 6):
             trend_date = start_date + timedelta(hours=hours_passed)
-            score = generate_mock_scores(base_e, base_c, base_i)
-            latest_score = score
+            mbi, wbi, ctx = generate_mock_scores(base_e, base_c, base_i)
+            latest_mbi = mbi
+            latest_wbi = wbi
+            latest_ctx = ctx
+            
             trends.append({
                 "targetId": chan["_id"],
                 "type": "channel",
                 "date": trend_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "score": score
+                "score": mbi,
+                "wbi": wbi,
+                "context": ctx
             })
         
-        chan["burnout_mean"] = latest_score
-        chan["description"] = None
+        chan["burnout_mean"] = latest_mbi
+        chan["wbi_scores"] = latest_wbi
+        chan["context_metrics"] = latest_ctx
+        chan["description"] = random.choice(descriptions)
 
         for i in range(15):
             random_days = random.randint(0, total_days)
             session_start = start_date + timedelta(days=random_days, hours=random.randint(8, 20))
             session_end = session_start + timedelta(minutes=random.randint(5, 60))
             msg_count = random.randint(3, 40)
+            
+            sess_mbi, sess_wbi, _ = generate_mock_scores(base_e, base_c, base_i, noise=0.2)
             
             sessions.append({
                 "_id": str(uuid.uuid4()),
@@ -143,19 +170,17 @@ def seed_test_database():
                 "startTime": session_start.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "endTime": session_end.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "messageCount": msg_count,
-                "overtime_factor": random.choice([1.0, 1.2, 1.5]),
+                "overtime_factor": random.choice([1.0, 1.1, 1.2]),
                 "density": round(random.uniform(0.5, 3.5), 2),
                 "latency": round(random.uniform(2.0, 15.0), 2),
-                "sessionScores": generate_mock_scores(base_e, base_c, base_i, noise=0.2)
+                "sessionScores": sess_mbi,
+                "wbi_scores": sess_wbi
             })
 
     db.channels.insert_many(channels_data)
     db.teams.insert_many(teams_data)
     db.trends.insert_many(trends)
     db.sessions.insert_many(sessions)
-
-    print(f"Database successfully populated with realistic mock data!")
-    print(f"Generated {len(trends)} historical trends and {len(sessions)} chat sessions.")
 
 if __name__ == "__main__":
     seed_test_database()

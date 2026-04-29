@@ -161,6 +161,26 @@ export function Header() {
                   </div>
                 </div>
               </div>
+
+              {isContextMode && (
+                <>
+                  <div className="my-3 border-t border-border" />
+                  <h4 className="font-semibold text-sm text-primary flex items-center gap-1.5">
+                    <BrainCircuit className="h-4 w-4" />
+                    Weighted Burnout Index (WBI)
+                  </h4>
+                  <div className="space-y-2 text-xs text-muted-foreground">
+                    <p>
+                      <strong>Context Mode</strong> activates the WBI, an advanced metric tailored for HR professionals. It adjusts raw AI sentiment scores using real digital workspace telemetry to ensure early detection accuracy.
+                    </p>
+                    <ul className="list-disc pl-4 space-y-1">
+                      <li><strong className="text-foreground">Overtime:</strong> Penalizes continuous after-hours or weekend work.</li>
+                      <li><strong className="text-foreground">Density:</strong> Identifies cognitive overload from rapid message volumes.</li>
+                      <li><strong className="text-foreground">Latency:</strong> Flags unusual response delays, a key indicator of team disengagement.</li>
+                    </ul>
+                  </div>
+                </>
+              )}
             </div>
           </PopoverContent>
         </Popover>

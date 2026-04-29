@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { ArrowLeft, Eye, EyeOff, Users, Globe, CalendarIcon, Search } from "lucide-react"
 import {
-  LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine,
+  AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Legend
 } from "recharts"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -44,6 +44,27 @@ export function TeamDetail() {
   const [dimensionHistory, setDimensionHistory] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
+  const getOvertimeLabel = (val: number) => {
+    if (val >= 1.2) return "Weekend"
+    if (val >= 1.1) return "After Hours"
+    return "Work Hours"
+  }
+
+  const formatDimensionTooltip = (value: any, name: any, props: any) => {
+    if (!isContextMode || !props.payload.context) return [value, name]
+    const ctx = props.payload.context
+    if (name === "Exhaustion") return [`${value} / Overtime: ${getOvertimeLabel(ctx.avg_overtime)}`, name]
+    if (name === "Cynicism") return [`${value} / Latency: ${ctx.avg_latency} min/msg`, name]
+    if (name === "Inefficacy") return [`${value} / Density: ${ctx.avg_density} msg/min`, name]
+    return [value, name]
+  }
+
+  const formatOverallTooltip = (value: any, name: any, props: any) => {
+    if (!isContextMode || !props.payload.context) return [value, name]
+    const ctx = props.payload.context
+    return [`${value} / Overtime: ${getOvertimeLabel(ctx.avg_overtime)} / Density: ${ctx.avg_density} / Latency: ${ctx.avg_latency}`, name]
+  }
+
   useEffect(() => {
     const fetchData = async () => {
       if (!selectedTeamId || selectedTeamId === "undefined") {
@@ -82,7 +103,8 @@ export function TeamDetail() {
             wbi: point.wbi || point.score || 0,
             wbi_e: point.wbi_e || point.exhaustion || 0,
             wbi_c: point.wbi_c || point.cynicism || 0,
-            wbi_i: point.wbi_i || point.inefficacy || 0
+            wbi_i: point.wbi_i || point.inefficacy || 0,
+            context: point.context || null
           }))
 
           setDimensionHistory(formattedHistory)
@@ -107,7 +129,8 @@ export function TeamDetail() {
             wbi: point.wbi || point.score || 0,
             wbi_e: point.wbi_e || point.exhaustion || 0,
             wbi_c: point.wbi_c || point.cynicism || 0,
-            wbi_i: point.wbi_i || point.inefficacy || 0
+            wbi_i: point.wbi_i || point.inefficacy || 0,
+            context: point.context || null
           }))
           
           setDimensionHistory(formattedHistory)
@@ -180,6 +203,8 @@ export function TeamDetail() {
           cynicism={isContextMode ? (team.wbi_c ?? team.cynicism) : team.cynicism}
           inefficacy={isContextMode ? (team.wbi_i ?? team.inefficacy) : team.inefficacy}
           title="Burnout Dimensions Comparison"
+          isContextMode={isContextMode}
+          contextMetrics={team.context}
         />
       </div>
 
@@ -340,28 +365,13 @@ export function TeamDetail() {
                           <ReferenceLine y={75} yAxisId="left" stroke="hsl(0, 84%, 60%)" strokeDasharray="5 5" label={{ value: "Critical", position: "right", fill: "hsl(0, 84%, 60%)", fontSize: 11 }} />
                           <ReferenceLine y={50} yAxisId="left" stroke="hsl(25, 95%, 53%)" strokeDasharray="5 5" label={{ value: "High", position: "right", fill: "hsl(25, 95%, 53%)", fontSize: 11 }} />
                           <ReferenceLine y={25} yAxisId="left" stroke="hsl(48, 96%, 53%)" strokeDasharray="5 5" label={{ value: "Moderate", position: "right", fill: "hsl(48, 96%, 40%)", fontSize: 11 }} />
-                          <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }} />
+                          <Tooltip 
+                            contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }} 
+                            formatter={formatOverallTooltip}
+                          />
                           <Area type="monotone" dataKey={isContextMode ? "wbi" : "overall"} stroke="hsl(var(--primary))" fill="url(#colorOverall)" strokeWidth={3} dot={{ r: 4 }} name="Overall Score" yAxisId="left" />
                         </AreaChart>
                       </ResponsiveContainer>
-                    </div>
-                    <div className="mt-4 flex items-center justify-center gap-6 text-sm flex-wrap">
-                      <div className="flex items-center gap-2">
-                        <div className="h-3 w-3 rounded-full bg-red-500" />
-                        <span className="text-muted-foreground">Critical (75+)</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="h-3 w-3 rounded-full bg-orange-500" />
-                        <span className="text-muted-foreground">High (50-74)</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="h-3 w-3 rounded-full bg-yellow-500" />
-                        <span className="text-muted-foreground">Moderate (25-49)</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="h-3 w-3 rounded-full bg-green-500" />
-                        <span className="text-muted-foreground">Low (0-24)</span>
-                      </div>
                     </div>
                   </>
                 ) : (
@@ -381,16 +391,14 @@ export function TeamDetail() {
                     <PopoverTrigger asChild>
                       <Button variant="outline" size="sm" className="gap-2">
                         <CalendarIcon className="h-4 w-4" />
-                        {startDate && endDate
-                          ? `${format(startDate, "MMM d")} - ${format(endDate, "MMM d")}`
-                          : "Select Dates"}
+                        {startDate && endDate ? `${format(startDate, "MMM d")} - ${format(endDate, "MMM d")}` : "Select Date Range"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="end">
                       <div className="flex flex-col sm:flex-row">
                         <div className="p-3 border-b sm:border-b-0 sm:border-r">
                           <p className="text-sm font-medium mb-2">Start Date</p>
-                          <Calendar mode="single" selected={startDate} onSelect={setStartDate} />
+                          <Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus />
                         </div>
                         <div className="p-3">
                           <p className="text-sm font-medium mb-2">End Date</p>
@@ -417,7 +425,10 @@ export function TeamDetail() {
                           <ReferenceLine y={75} yAxisId="left" stroke="hsl(0, 84%, 60%)" strokeDasharray="5 5" label={{ value: "Critical", position: "right", fill: "hsl(0, 84%, 60%)", fontSize: 11 }} />
                           <ReferenceLine y={50} yAxisId="left" stroke="hsl(25, 95%, 53%)" strokeDasharray="5 5" label={{ value: "High", position: "right", fill: "hsl(25, 95%, 53%)", fontSize: 11 }} />
                           <ReferenceLine y={25} yAxisId="left" stroke="hsl(48, 96%, 53%)" strokeDasharray="5 5" label={{ value: "Moderate", position: "right", fill: "hsl(48, 96%, 40%)", fontSize: 11 }} />
-                          <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }} />
+                          <Tooltip 
+                            contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }} 
+                            formatter={formatDimensionTooltip}
+                          />
                           <Legend />
                           <Line type="monotone" dataKey={isContextMode ? "wbi_e" : "exhaustion"} stroke="hsl(280, 65%, 60%)" strokeWidth={2} dot={{ r: 4 }} yAxisId="left" name="Exhaustion" />
                           <Line type="monotone" dataKey={isContextMode ? "wbi_c" : "cynicism"} stroke="hsl(210, 80%, 50%)" strokeWidth={2} dot={{ r: 4 }} yAxisId="left" name="Cynicism" />

@@ -39,6 +39,23 @@ export function MainDashboard() {
   const [chartData, setChartData] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
+  const getOvertimeLabel = (val: number) => {
+    if (val >= 1.2) return "Weekend"
+    if (val >= 1.1) return "After Hours"
+    return "Work Hours"
+  }
+
+  const formatTooltipValue = (value: any, name: any, props: any) => {
+    if (!isContextMode) return [value, name]
+    const dataKey = String(props.dataKey)
+    const teamId = dataKey.replace("_wbi", "")
+    const ctx = props.payload[`${teamId}_context`]
+    if (ctx) {
+      return [`${value} / Overtime: ${getOvertimeLabel(ctx.avg_overtime)} / Density: ${ctx.avg_density} / Latency: ${ctx.avg_latency}`, name]
+    }
+    return [value, name]
+  }
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
@@ -79,6 +96,7 @@ export function MainDashboard() {
               }
               mergedByDate[point.date][teamId] = point.score
               mergedByDate[point.date][`${teamId}_wbi`] = point.wbi || point.score
+              mergedByDate[point.date][`${teamId}_context`] = point.context || null
             })
           })
 
@@ -277,6 +295,7 @@ export function MainDashboard() {
                               borderRadius: "var(--radius)",
                             }}
                             labelStyle={{ color: "hsl(var(--foreground))" }}
+                            formatter={formatTooltipValue}
                           />
                           <Legend />
                           {topTeams.map((team, index) => (

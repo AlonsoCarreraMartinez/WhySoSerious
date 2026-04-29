@@ -49,6 +49,27 @@ export function ChannelDetail() {
   const [dimensionHistory, setDimensionHistory] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
+  const getOvertimeLabel = (val: number) => {
+    if (val >= 1.2) return "Weekend"
+    if (val >= 1.1) return "After Hours"
+    return "Work Hours"
+  }
+
+  const formatDimensionTooltip = (value: any, name: any, props: any) => {
+    if (!isContextMode || !props.payload.context) return [value, name]
+    const ctx = props.payload.context
+    if (name === "Exhaustion") return [`${value} / Overtime: ${getOvertimeLabel(ctx.avg_overtime)}`, name]
+    if (name === "Cynicism") return [`${value} / Latency: ${ctx.avg_latency} min/msg`, name]
+    if (name === "Inefficacy") return [`${value} / Density: ${ctx.avg_density} msg/min`, name]
+    return [value, name]
+  }
+
+  const formatOverallTooltip = (value: any, name: any, props: any) => {
+    if (!isContextMode || !props.payload.context) return [value, name]
+    const ctx = props.payload.context
+    return [`${value} / Overtime: ${getOvertimeLabel(ctx.avg_overtime)} / Density: ${ctx.avg_density} / Latency: ${ctx.avg_latency}`, name]
+  }
+
   useEffect(() => {
     const fetchData = async () => {
       if (!selectedChannelId || selectedChannelId === "undefined") {
@@ -85,7 +106,8 @@ export function ChannelDetail() {
             wbi: point.wbi || point.score || 0,
             wbi_e: point.wbi_e || point.exhaustion || 0,
             wbi_c: point.wbi_c || point.cynicism || 0,
-            wbi_i: point.wbi_i || point.inefficacy || 0
+            wbi_i: point.wbi_i || point.inefficacy || 0,
+            context: point.context || null
           }))
 
           setDimensionHistory(formattedHistory)
@@ -108,7 +130,8 @@ export function ChannelDetail() {
             wbi: point.wbi || point.score || 0,
             wbi_e: point.wbi_e || point.exhaustion || 0,
             wbi_c: point.wbi_c || point.cynicism || 0,
-            wbi_i: point.wbi_i || point.inefficacy || 0
+            wbi_i: point.wbi_i || point.inefficacy || 0,
+            context: point.context || null
           }))
           
           setDimensionHistory(formattedHistory)
@@ -186,6 +209,8 @@ export function ChannelDetail() {
           cynicism={isContextMode ? (channel.wbi_c ?? channel.cynicism) : channel.cynicism}
           inefficacy={isContextMode ? (channel.wbi_i ?? channel.inefficacy) : channel.inefficacy}
           title="Burnout Dimensions"
+          isContextMode={isContextMode}
+          contextMetrics={channel.context}
         />
       </div>
 
@@ -300,7 +325,10 @@ export function ChannelDetail() {
                           <ReferenceLine y={75} yAxisId="left" stroke="hsl(0, 84%, 60%)" strokeDasharray="5 5" label={{ value: "Critical", position: "right", fill: "hsl(0, 84%, 60%)", fontSize: 11 }} />
                           <ReferenceLine y={50} yAxisId="left" stroke="hsl(25, 95%, 53%)" strokeDasharray="5 5" label={{ value: "High", position: "right", fill: "hsl(25, 95%, 53%)", fontSize: 11 }} />
                           <ReferenceLine y={25} yAxisId="left" stroke="hsl(48, 96%, 53%)" strokeDasharray="5 5" label={{ value: "Moderate", position: "right", fill: "hsl(48, 96%, 40%)", fontSize: 11 }} />
-                          <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }} />
+                          <Tooltip 
+                            contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }} 
+                            formatter={formatOverallTooltip}
+                          />
                           <Area type="monotone" dataKey={isContextMode ? "wbi" : "overall"} stroke="hsl(var(--primary))" fill="url(#colorOverallChan)" strokeWidth={3} dot={{ r: 4 }} name="Overall Score" yAxisId="left" />
                         </AreaChart>
                       </ResponsiveContainer>
@@ -375,7 +403,10 @@ export function ChannelDetail() {
                           <ReferenceLine y={75} yAxisId="left" stroke="hsl(0, 84%, 60%)" strokeDasharray="5 5" label={{ value: "Critical", position: "right", fill: "hsl(0, 84%, 60%)", fontSize: 11 }} />
                           <ReferenceLine y={50} yAxisId="left" stroke="hsl(25, 95%, 53%)" strokeDasharray="5 5" label={{ value: "High", position: "right", fill: "hsl(25, 95%, 53%)", fontSize: 11 }} />
                           <ReferenceLine y={25} yAxisId="left" stroke="hsl(48, 96%, 53%)" strokeDasharray="5 5" label={{ value: "Moderate", position: "right", fill: "hsl(48, 96%, 40%)", fontSize: 11 }} />
-                          <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }} />
+                          <Tooltip 
+                            contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }} 
+                            formatter={formatDimensionTooltip}
+                          />
                           <Legend />
                           <Line type="monotone" dataKey={isContextMode ? "wbi_e" : "exhaustion"} stroke="hsl(280, 65%, 60%)" strokeWidth={2} dot={{ r: 4 }} yAxisId="left" name="Exhaustion" />
                           <Line type="monotone" dataKey={isContextMode ? "wbi_c" : "cynicism"} stroke="hsl(210, 80%, 50%)" strokeWidth={2} dot={{ r: 4 }} yAxisId="left" name="Cynicism" />
