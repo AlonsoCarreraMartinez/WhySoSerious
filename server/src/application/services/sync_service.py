@@ -1,16 +1,17 @@
 from datetime import datetime, timedelta
 import uuid
 from typing import List
-from domain.ports import MessageRepository, TeamsProvider, BurnoutRepository, NotificationObserver
+from domain.ports import MessageRepository, TeamsProvider, BurnoutRepository, NotificationObserver, ChannelRepository
 from domain.models import ConversationSession, Message
 
 class SyncService:
 
     # Initialize repositories and provider. 
-    def __init__(self, message_repo: MessageRepository, teams_provider: TeamsProvider,burnout_repo: BurnoutRepository): 
+    def __init__(self, message_repo: MessageRepository, teams_provider: TeamsProvider, burnout_repo: BurnoutRepository, channel_repo: ChannelRepository): 
         self.message_repo = message_repo
         self.teams_provider = teams_provider
         self.burnout_repo = burnout_repo
+        self.channel_repo = channel_repo
         self.target_teams = ["León", "Oviedo", "La Bañeza"]
         self.observers: List[NotificationObserver] = []
 
@@ -71,7 +72,10 @@ class SyncService:
         else:
             new_session_id = f"session_{msg.id}"
             
-            if msg.channelName == "General":
+            db_channel = self.channel_repo.get_by_id(channel_id)
+            is_chat = db_channel and db_channel.channel_type == "chat"
+            
+            if is_chat:
                 last_msg = self.message_repo.get_last_message_by_channel(channel_id)
                 
                 if not last_msg or not last_msg.sessionId:

@@ -42,7 +42,7 @@ def run_sync():
         notification_repo = MongoNotificationRepository()
         azure_provider = AzureTeamsProvider()
 
-        sync_service = SyncService(message_repo, azure_provider, burnout_repo)
+        sync_service = SyncService(message_repo, azure_provider, burnout_repo, channel_repo)
         burnout_service = BurnoutService(message_repo, team_repo, channel_repo, burnout_repo)
         
         notification_observer = MongoNotificationObserver(notification_repo)

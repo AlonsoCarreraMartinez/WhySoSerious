@@ -16,7 +16,6 @@ from infrastructure.external.notifications.mongo_notification_observer import Mo
 # uvicorn src.infrastructure.api.main:app --reload
 # set PYTHONPATH=src && uvicorn infrastructure.api.main:app --reload
 
-
 # Initialize the FastAPI application instance.
 app = FastAPI(title="WhySoSerious")
 
@@ -37,7 +36,7 @@ burnout_repo = MongoBurnoutRepository()
 notification_repo = MongoNotificationRepository()
 azure_provider = AzureTeamsProvider()
 
-sync_service = SyncService(message_repo, azure_provider, burnout_repo)
+sync_service = SyncService(message_repo, azure_provider, burnout_repo, channel_repo)
 burnout_service = BurnoutService(message_repo, team_repo, channel_repo, burnout_repo)
 
 notification_observer = MongoNotificationObserver(notification_repo)
@@ -47,11 +46,9 @@ burnout_service.add_observer(notification_observer)
 # Initialize the Background Task Scheduler to manage automated Cron Jobs.
 task_scheduler = TaskScheduler(sync_service, burnout_service)
 
-
 # Launch the background scheduler to start syncing and analyzing data automatically.
 @app.on_event("startup")
 async def startup_event():
-
     task_scheduler.start()
     print("Backend started and Cron Jobs scheduled")
 

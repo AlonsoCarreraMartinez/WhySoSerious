@@ -171,7 +171,7 @@ export function Header() {
                   </h4>
                   <div className="space-y-2 text-xs text-muted-foreground">
                     <p>
-                      <strong>Context Mode</strong> activates the WBI, an advanced metric tailored for HR professionals. It adjusts raw AI sentiment scores using real digital workspace telemetry to ensure early detection accuracy.
+                      <strong>Context Mode</strong> activates the WBI. This metric adjusts raw AI sentiment scores using real digital workspace telemetry to ensure early detection accuracy.
                     </p>
                     <ul className="list-disc pl-4 space-y-1">
                       <li><strong className="text-foreground">Overtime:</strong> Penalizes continuous after-hours or weekend work.</li>

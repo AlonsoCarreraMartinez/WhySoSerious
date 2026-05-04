@@ -11,7 +11,6 @@ class MongoMessageRepository(MessageRepository):
 
     # Saves a message to the database.
     def save(self, message: Message):
-    
         self.collection.update_one(
             {"_id": message.id},
             {"$set": message.model_dump(by_alias=True)},
@@ -20,10 +19,8 @@ class MongoMessageRepository(MessageRepository):
 
     # Returns all messages that haven't been processed by the BERT model yet.
     def get_unanalyzed(self) -> List[Message]:
-        
-        cursor = self.collection.find({"analyzed": False})
-        
-        return [Message(**doc) for doc in cursor] # Convert each MongoDB document into a Message model object using unpacking (**).
+        cursor = self.collection.find({"analyzed": False}).sort("timestamp", 1)
+        return [Message(**doc) for doc in cursor]
 
     # Marks a list of messages as analyzed and clears their content for privacy.
     def mark_as_analyzed(self, message_ids: List[str]):
@@ -42,12 +39,10 @@ class MongoMessageRepository(MessageRepository):
 
     # Returns the timestamp of the last message saved for a specific channel.
     def get_last_sync_timestamp(self, channel_id: str) -> Optional[str]:
-
         last_message = self.collection.find_one(
             {"channelId": channel_id},
             sort=[("timestamp", -1)]
         )
-        
         return last_message.get("timestamp") if last_message else None
     
     # Returns the last message saved for a specific channel to compare timestamps.
@@ -62,7 +57,6 @@ class MongoMessageRepository(MessageRepository):
     
     # Retrieves the last N messages from a channel before a specific timestamp for context.
     def get_previous_messages(self, channel_id: str, start_time_str: str, limit: int = 5) -> List[Message]:
-        
         cursor = self.collection.find({
             "channelId": channel_id,
             "timestamp": {"$lt": start_time_str}
@@ -70,5 +64,4 @@ class MongoMessageRepository(MessageRepository):
         
         messages = [Message(**doc) for doc in cursor]
         messages.reverse()
-        
         return messages

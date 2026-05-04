@@ -1,5 +1,6 @@
 import requests
 import re
+import time
 from typing import List, Optional
 from domain.ports import TeamsProvider
 from domain.models import Message
@@ -14,23 +15,25 @@ class AzureTeamsProvider(TeamsProvider):
         self.tenant_id = settings.AZURE_TENANT_ID
         self.token_url = f"https://login.microsoftonline.com/{self.tenant_id}/oauth2/v2.0/token"
         self.access_token = None
+        self.token_expires_at = 0
 
-    # Authenticate with Microsoft Azure using OAuth2 Client Credentials flow to get an access token.
-    def get_access_token(self) -> str:
-        data = {
-            'client_id': self.client_id,
-            'scope': 'https://graph.microsoft.com/.default',
-            'client_secret': self.client_secret,
-            'grant_type': 'client_credentials',
-        }
-        response = requests.post(self.token_url, data=data)
-        response.raise_for_status()
-        return response.json().get('access_token', "")
-
-    # Manage the access token and refresh it if necessary.
+    # Manage the access token and refresh it proactively if it's about to expire.
     def get_valid_token(self) -> str:
-        if not self.access_token:
-            self.access_token = self.get_access_token()
+        if not self.access_token or time.time() > self.token_expires_at - 300:
+            data = {
+                'client_id': self.client_id,
+                'scope': 'https://graph.microsoft.com/.default',
+                'client_secret': self.client_secret,
+                'grant_type': 'client_credentials',
+            }
+            response = requests.post(self.token_url, data=data)
+            response.raise_for_status()
+            
+            token_data = response.json()
+            self.access_token = token_data.get('access_token', "")
+            expires_in = token_data.get('expires_in', 3599)
+            self.token_expires_at = time.time() + expires_in
+
         return self.access_token
 
     # Fetch all groups that are provisioned as Teams from Microsoft Graph.
@@ -66,7 +69,6 @@ class AzureTeamsProvider(TeamsProvider):
 
     # Map a Graph API message dictionary to a domain Message model.
     def map_to_domain_message(self, data: dict, team_id: str, channel_id: str, parent_id: Optional[str] = None) -> Optional[Message]:
-        
         subject = data.get('subject')
         body = data.get('body') or {}
         raw_body = body.get('content', '')
@@ -94,15 +96,12 @@ class AzureTeamsProvider(TeamsProvider):
     def get_new_messages(self, team_id: str, channel_id: str, last_sync: Optional[str]) -> List[Message]:
         try:
             domain_messages = []
-            skip = 0
-            top = 50
             keep_fetching = True
             token = self.get_valid_token()
             headers = {'Authorization': f'Bearer {token}'}
+            url = f"https://graph.microsoft.com/v1.0/teams/{team_id}/channels/{channel_id}/messages?$top=50&$expand=replies"
 
             while keep_fetching:
-                url = f"https://graph.microsoft.com/v1.0/teams/{team_id}/channels/{channel_id}/messages?$top={top}&$skip={skip}"
-                
                 response = requests.get(url, headers=headers)
                 if response.status_code != 200:
                     break
@@ -110,10 +109,11 @@ class AzureTeamsProvider(TeamsProvider):
                 data = response.json()
                 raw_messages = data.get('value', [])
                 
-                if len(raw_messages) < top:
-                    keep_fetching = False
+                next_link = data.get('@odata.nextLink')
+                if next_link:
+                    url = next_link
                 else:
-                    skip += top
+                    keep_fetching = False
 
                 for msg in reversed(raw_messages):
                     msg_from = msg.get("from") or {}
@@ -131,24 +131,20 @@ class AzureTeamsProvider(TeamsProvider):
                         if mapped:
                             domain_messages.append(mapped)
                     
-                    replies_url = f"https://graph.microsoft.com/v1.0/teams/{team_id}/channels/{channel_id}/messages/{msg_id}/replies"
-                    replies_res = requests.get(replies_url, headers=headers)
-                    
-                    if replies_res.status_code == 200:
-                        replies_data = replies_res.json().get('value', [])
-                        for reply in reversed(replies_data):
-                            reply_from = reply.get("from") or {}
-                            reply_user = reply_from.get("user") or {}
-                            reply_sender_tenant_id = reply_user.get("tenantId")
+                    replies_data = msg.get('replies', [])
+                    for reply in reversed(replies_data):
+                        reply_from = reply.get("from") or {}
+                        reply_user = reply_from.get("user") or {}
+                        reply_sender_tenant_id = reply_user.get("tenantId")
 
-                            if reply_sender_tenant_id != self.tenant_id:
-                                continue
+                        if reply_sender_tenant_id != self.tenant_id:
+                            continue
 
-                            reply_date = reply.get('createdDateTime')
-                            if not last_sync or (reply_date and reply_date > last_sync):
-                                mapped_reply = self.map_to_domain_message(reply, team_id, channel_id, parent_id=msg_id)
-                                if mapped_reply:
-                                    domain_messages.append(mapped_reply)
+                        reply_date = reply.get('createdDateTime')
+                        if not last_sync or (reply_date and reply_date > last_sync):
+                            mapped_reply = self.map_to_domain_message(reply, team_id, channel_id, parent_id=msg_id)
+                            if mapped_reply:
+                                domain_messages.append(mapped_reply)
 
             return domain_messages
             
@@ -198,4 +194,3 @@ class AzureTeamsProvider(TeamsProvider):
             }
         except Exception:
             return {"in_org": False, "is_admin": False, "is_owner": False, "owned_teams": []}
-            

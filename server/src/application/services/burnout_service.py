@@ -15,8 +15,6 @@ class BurnoutService:
         channel_repo: ChannelRepository,
         burnout_repo: BurnoutRepository 
     ):
-        
-        # Store repositories and initialize the local AI model.
         self.message_repo = message_repo
         self.team_repo = team_repo
         self.channel_repo = channel_repo
@@ -30,10 +28,8 @@ class BurnoutService:
 
     # Calculates Overtime, Density, and Latency based on session timestamps.
     def extract_context_features(self, start_time_str: str, end_time_str: str, message_count: int):
-        
         fmt = "%Y-%m-%dT%H:%M:%SZ"
         try:
-            
             start_t = datetime.strptime(start_time_str[:19] + "Z", fmt)
             end_t = datetime.strptime(end_time_str[:19] + "Z", fmt)
             
@@ -54,11 +50,9 @@ class BurnoutService:
             overtime_factor = 1.0 
 
         density = round(message_count / duration_minutes, 2)
-
         latency = round(duration_minutes / (message_count - 1), 2) if message_count > 1 else 0.0
 
         return overtime_factor, density, latency, duration_minutes
-
 
     # Group unanalyzed messages into sessions, analyze them, and purge text.
     def analyze_data(self):
@@ -90,32 +84,44 @@ class BurnoutService:
             msgs = data["msgs"]
             channel_id = data["channelId"]
             team_id = data["teamId"]
-            channel_name = data.get("channelName", "")
+            
+            msgs.sort(key=lambda m: m.timestamp)
             
             start_time = msgs[0].timestamp
             end_time = msgs[-1].timestamp
             message_count = len(msgs)
 
-            current_text = " ".join([m.content for m in msgs if m.content])
-            session_text = current_text 
+            session_text = " ".join([m.content for m in msgs if m.content])
  
-            is_chat = True 
-            
-            if is_chat:
-                context_msgs = self.message_repo.get_previous_messages(channel_id, start_time, limit=5)
-                if context_msgs:
-                    context_text = " ".join([m.content for m in context_msgs if m.content])
-                    session_text = f"[CONTEXTO PREVIO] {context_text} [SESIÓN ACTUAL] {current_text}"
-            
             results = self.predictor.extract_content_features(session_text)
             
             e_val = results.get("exhaustion", 0.0)
             c_val = results.get("cynicism", 0.0)
             i_val = results.get("inefficacy", 0.0)
-            b_index = results.get("burnout_index", 0.0)
+
+            existing_sessions = self.burnout_repo.get_sessions_by_channel(channel_id)
+            existing_session = next((s for s in existing_sessions if s.id == session_id), None)
+
+            total_messages_for_db = message_count
+
+            if existing_session and existing_session.sessionScores:
+                old_count = existing_session.messageCount
+                total_messages_for_db = old_count + message_count
+                
+                prev_e = existing_session.sessionScores.exhaustion
+                prev_c = existing_session.sessionScores.cynicism
+                prev_i = existing_session.sessionScores.inefficacy
+                
+                e_val = round(((prev_e * old_count) + (e_val * message_count)) / total_messages_for_db, 2)
+                c_val = round(((prev_c * old_count) + (c_val * message_count)) / total_messages_for_db, 2)
+                i_val = round(((prev_i * old_count) + (i_val * message_count)) / total_messages_for_db, 2)
+                
+                start_time = existing_session.startTime
+
+            b_index = round((e_val + c_val + i_val) / 3.0, 2)
 
             overtime_f, density_f, latency_f, duration_mins = self.extract_context_features(
-                start_time, end_time, message_count
+                start_time, end_time, total_messages_for_db
             )
 
             overtime_penalty = round(overtime_f - 1.0, 2)
@@ -148,7 +154,7 @@ class BurnoutService:
                 teamId=team_id,
                 startTime=start_time, 
                 endTime=end_time, 
-                messageCount=message_count,
+                messageCount=total_messages_for_db,
                 sessionScores=mbi,
                 wbi_scores=wbi,
                 overtime_factor=overtime_f,

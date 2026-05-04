@@ -31,7 +31,6 @@ class Team(BaseModel):
     visibility: Literal["public", "private", "org-wide"] 
     members: List[str] = []
     channels: List[str] = []
-    description: Optional[str] = None
     burnout_mean: Optional[MBIScores] = None
     context_metrics: Optional[ContextMetrics] = None
     wbi_scores: Optional[WBIScores] = None
@@ -43,7 +42,6 @@ class Channel(BaseModel):
     visibility: Literal["public", "private", "shared"]
     channel_type: Literal["chat", "post"] 
     members: List[str] = []
-    description: Optional[str] = None
     burnout_mean: Optional[MBIScores] = None
     context_metrics: Optional[ContextMetrics] = None
     wbi_scores: Optional[WBIScores] = None
