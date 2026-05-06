@@ -21,3 +21,7 @@ botbuilder-integration-aiohttp
 bcrypt==3.2.0
 passlib[bcrypt]
 werkzeug
+PyJWT
+python-jose[cryptography]
+apscheduler
+schedule

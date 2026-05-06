@@ -57,21 +57,21 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         if (!userEmail) throw new Error("Could not get user email from Teams")
 
       } catch (error) {
-        if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-          userEmail = "alonso@ww5dl.onmicrosoft.com" 
-          userName = "Alonso"
-        } else {
-          setInOrg(false)
-          setAuthMessage("Security block: You must open this dashboard inside Microsoft Teams.")
-          setIsCheckingAuth(false)
-          return
-        }
+        setInOrg(false)
+        setAuthMessage("Security block: You must open this dashboard inside Microsoft Teams.")
+        setIsCheckingAuth(false)
+        return
       }
 
       try {
-        const response = await fetch("http://localhost:8000/api/auth/verify", {
+        const API_BASE = (import.meta as any).env.VITE_API_URL || "http://localhost:8000"
+        
+        const response = await fetch(`${API_BASE}/api/auth/verify`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "ngrok-skip-browser-warning": "true"
+          },
           body: JSON.stringify({ email: userEmail })
         })
 

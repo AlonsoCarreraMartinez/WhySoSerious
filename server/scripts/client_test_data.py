@@ -98,7 +98,7 @@ def seed_test_database():
 
     trends = []
     sessions = []
-    descriptions = [None, "Main sync channel", "Daily standups and logs", None, "General project discussion"]
+    
 
     for team in teams_data:
         base_e, base_c, base_i = team_profiles[team["_id"]]
@@ -125,7 +125,6 @@ def seed_test_database():
         team["burnout_mean"] = latest_mbi 
         team["wbi_scores"] = latest_wbi
         team["context_metrics"] = latest_ctx
-        team["description"] = random.choice(descriptions)
 
     for chan in channels_data:
         team_name = chan["team_name"]
@@ -153,7 +152,6 @@ def seed_test_database():
         chan["burnout_mean"] = latest_mbi
         chan["wbi_scores"] = latest_wbi
         chan["context_metrics"] = latest_ctx
-        chan["description"] = random.choice(descriptions)
 
         for i in range(15):
             random_days = random.randint(0, total_days)

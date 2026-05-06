@@ -65,3 +65,7 @@ Thumbs.db
 
 # Ngrok
 ngrok.exe
+
+# Docker 
+Dockerfile
+.dockerignore
