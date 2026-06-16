@@ -12,7 +12,7 @@ export interface AppNotification {
 }
 
 const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
-  const token = localStorage.getItem("jwt_token");
+  const token = sessionStorage.getItem("jwt_token");
   
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
