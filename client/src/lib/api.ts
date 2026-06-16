@@ -1,6 +1,7 @@
 import { Team, Channel, Member, HistoricalDataPoint } from "./mock-data"
 
-const API_BASE = "https://alonsocarreramartinez-space.hf.space/api"
+// Usando variable de entorno para la URL base
+const API_BASE = `${(import.meta as any).env.VITE_API_URL}/api`
 
 export interface AppNotification {
   id: string;
@@ -12,6 +13,7 @@ export interface AppNotification {
 }
 
 const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
+  
   const token = sessionStorage.getItem("jwt_token");
   
   const headers: Record<string, string> = {
@@ -46,19 +48,13 @@ export const api = {
     return res.json()
   },
 
-  getTeamChannels: async (teamName: string): Promise<Channel[]> => {
-    const res = await fetchWithAuth(`${API_BASE}/channels/team/${encodeURIComponent(teamName)}`)
-    if (!res.ok) throw new Error("Failed to fetch team channels")
-    return res.json()
-  },
-
   getChannelDetail: async (channelId: string): Promise<Channel> => {
     const res = await fetchWithAuth(`${API_BASE}/channels/${encodeURIComponent(channelId)}`)
     if (!res.ok) throw new Error("Failed to fetch channel details")
     return res.json()
   },
 
-  getHistoricalData: async (targetName: string, startDate?: string | null, endDate?: string | null): Promise<HistoricalDataPoint[]> => {
+  getBurnoutHistorical: async (targetName: string, startDate?: string, endDate?: string): Promise<HistoricalDataPoint[]> => {
     let url = `${API_BASE}/burnout/historical/${encodeURIComponent(targetName)}`
     
     if (startDate && endDate) {
@@ -89,9 +85,8 @@ export const api = {
   },
 
   markNotificationAsRead: async (notificationId: string, email: string): Promise<void> => {
-    const res = await fetchWithAuth(`${API_BASE}/notifications/${encodeURIComponent(notificationId)}/read`, {
-      method: "PUT",
-      body: JSON.stringify({ email })
+    const res = await fetchWithAuth(`${API_BASE}/notifications/${notificationId}/read?user_email=${encodeURIComponent(email)}`, {
+      method: 'PUT'
     })
     if (!res.ok) throw new Error("Failed to mark notification as read")
   }

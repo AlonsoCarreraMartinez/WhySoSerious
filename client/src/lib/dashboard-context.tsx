@@ -64,12 +64,12 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-
-        const API_BASE = "https://alonsocarreramartinez-space.hf.space/api"
-
-        if (!API_BASE) throw new Error("VITE_API_URL is missing!")
         
-        const response = await fetch(`${API_BASE}/api/auth/verify`, {
+        const API_BASE = `${(import.meta as any).env.VITE_API_URL}/api`
+
+        if (!API_BASE || API_BASE.includes("undefined")) throw new Error("VITE_API_URL is missing!")
+        
+        const response = await fetch(`${API_BASE}/auth/verify`, {
           method: "POST",
           headers: { 
             "Content-Type": "application/json",
@@ -83,6 +83,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         const authData = await response.json()
 
         if (authData.token) {
+          // 3. CORRECCIÓN: Guardamos el token en sessionStorage
           sessionStorage.setItem("jwt_token", authData.token)
         }
 
