@@ -22,10 +22,10 @@ app = FastAPI(title="WhySoSerious")
 # Configure CORS to allow requests from the React frontend.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
+    allow_origins=["https://why-so-serious-88p6ce3v6-acarrm04-7573s-projects.vercel.app"],
+    allow_credentials=True, 
     allow_methods=["*"],
-    allow_headers=["Content-Type", "Authorization", "ngrok-skip-browser-warning"], 
+    allow_headers=["*"], 
 )
 
 # Dependency Injection.
