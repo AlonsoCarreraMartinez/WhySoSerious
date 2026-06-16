@@ -83,7 +83,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         const authData = await response.json()
 
         if (authData.token) {
-          localStorage.setItem("jwt_token", authData.token)
+          sessionStorage.setItem("jwt_token", authData.token)
         }
 
         setInOrg(authData.in_org)
