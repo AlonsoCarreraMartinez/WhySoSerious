@@ -64,8 +64,9 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        //const API_BASE = (import.meta as any).env.VITE_API_URL
-        const API_BASE = "https://alonsocarreramartinez-space.hf.space"
+
+        const API_BASE = (import.meta as any).env.VITE_API_URL
+
         if (!API_BASE) throw new Error("VITE_API_URL is missing!")
         
         const response = await fetch(`${API_BASE}/api/auth/verify`, {

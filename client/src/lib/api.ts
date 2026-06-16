@@ -1,7 +1,6 @@
 import { Team, Channel, Member, HistoricalDataPoint } from "./mock-data"
 
-//const API_BASE = `${(import.meta as any).env.VITE_API_URL}/api`
-const API_BASE = "https://alonsocarreramartinez-space.hf.space"
+const API_BASE = `${(import.meta as any).env.VITE_API_URL}/api`
 
 export interface AppNotification {
   id: string;
