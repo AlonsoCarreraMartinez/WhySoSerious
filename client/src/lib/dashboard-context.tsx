@@ -57,22 +57,13 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         if (!userEmail) throw new Error("Could not get user email from Teams")
 
       } catch (error) {
-        
-        const urlParams = new URLSearchParams(window.location.search);
-        
-        if (urlParams.get("bypass") === "true") {
-          userEmail = "alonso@ww5dl.onmicrosoft.com";
-          userName = "Alonso";
-        } else {
-          setInOrg(false)
-          setAuthMessage("Security block: You must open this dashboard inside Microsoft Teams.")
-          setIsCheckingAuth(false)
-          return
-        }
+        setInOrg(false)
+        setAuthMessage("Security block: You must open this dashboard inside Microsoft Teams.")
+        setIsCheckingAuth(false)
+        return
       }
 
       try {
-        
         const API_BASE = `${(import.meta as any).env.VITE_API_URL}/api`
 
         if (!API_BASE || API_BASE.includes("undefined")) throw new Error("VITE_API_URL is missing!")
@@ -91,7 +82,6 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         const authData = await response.json()
 
         if (authData.token) {
-          
           sessionStorage.setItem("jwt_token", authData.token)
         }
 
@@ -99,12 +89,11 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         setAuthMessage(authData.auth_message)
 
         if (authData.in_org) {
-          let computedRole: UserRole = "employee"
-
+          let computedRole: UserRole = "employee" 
           if (authData.is_admin) {
-            computedRole = "admin"
+            computedRole = "admin" 
           } else if (authData.is_owner || (authData.managed_teams && authData.managed_teams.length > 0)) {
-            computedRole = "manager"
+            computedRole = "manager" 
           }
 
           setUserRole(computedRole)
