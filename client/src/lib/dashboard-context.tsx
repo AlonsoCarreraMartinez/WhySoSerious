@@ -64,10 +64,16 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        const apiUrl = import.meta.env.VITE_API_URL 
-        const response = await fetch(`${apiUrl}/api/auth/verify`, {
+        const API_BASE = `${(import.meta as any).env.VITE_API_URL}/api`
+
+        if (!API_BASE || API_BASE.includes("undefined")) throw new Error("VITE_API_URL is missing!")
+        
+        const response = await fetch(`${API_BASE}/auth/verify`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "ngrok-skip-browser-warning": "true"
+          },
           body: JSON.stringify({ email: userEmail })
         })
 
@@ -76,21 +82,19 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         const authData = await response.json()
 
         if (authData.token) {
-          localStorage.setItem("jwt_token", authData.token)
+          sessionStorage.setItem("jwt_token", authData.token)
         }
 
         setInOrg(authData.in_org)
         setAuthMessage(authData.auth_message)
 
         if (authData.in_org) {
-          let computedRole: UserRole = "employee"
-
+          let computedRole: UserRole = "employee" 
+          
           if (authData.is_admin) {
-            computedRole = "admin"
+            computedRole = "admin" 
           } else if (authData.managed_teams && authData.managed_teams.length > 0) {
-            computedRole = "manager"
-          } else {
-            computedRole = "employee"
+            computedRole = "manager" 
           }
 
           setUserRole(computedRole)
