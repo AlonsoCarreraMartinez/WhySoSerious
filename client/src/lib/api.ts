@@ -1,6 +1,6 @@
 import { Team, Channel, Member, HistoricalDataPoint } from "./mock-data"
 
-const API_BASE = `${(import.meta as any).env.VITE_API_URL}/api`
+const BASE_URL = (import.meta as any).env.VITE_API_URL
 
 export interface AppNotification {
   id: string;
@@ -29,7 +29,7 @@ const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
 export const api = {
   
   getDashboardTeams: async (): Promise<Team[]> => {
-    const res = await fetchWithAuth(`${API_BASE}/teams/dashboard`)
+    const res = await fetchWithAuth(`${BASE_URL}/api/teams/dashboard`)
     if (!res.ok) throw new Error("Failed to fetch dashboard teams")
     const data = await res.json()
     
@@ -43,7 +43,7 @@ export const api = {
   },
   
   getTeamDetail: async (teamName: string): Promise<Team> => {
-    const res = await fetchWithAuth(`${API_BASE}/teams/${encodeURIComponent(teamName)}`)
+    const res = await fetchWithAuth(`${BASE_URL}/api/teams/${encodeURIComponent(teamName)}`)
     if (!res.ok) throw new Error("Failed to fetch team details")
     const team = await res.json()
     
@@ -57,7 +57,7 @@ export const api = {
   },
 
   getDashboardChannels: async (): Promise<Channel[]> => {
-    const res = await fetchWithAuth(`${API_BASE}/channels/dashboard`)
+    const res = await fetchWithAuth(`${BASE_URL}/api/channels/dashboard`)
     if (!res.ok) throw new Error("Failed to fetch dashboard channels")
     const data = await res.json()
     
@@ -70,7 +70,7 @@ export const api = {
   },
 
   getChannelDetail: async (channelId: string): Promise<Channel> => {
-    const res = await fetchWithAuth(`${API_BASE}/channels/${encodeURIComponent(channelId)}`)
+    const res = await fetchWithAuth(`${BASE_URL}/api/channels/${encodeURIComponent(channelId)}`)
     if (!res.ok) throw new Error("Failed to fetch channel details")
     const channel = await res.json()
     
@@ -83,7 +83,7 @@ export const api = {
   },
 
   getBurnoutHistorical: async (targetName: string, startDate?: string, endDate?: string): Promise<HistoricalDataPoint[]> => {
-    let url = `${API_BASE}/burnout/historical/${encodeURIComponent(targetName)}`
+    let url = `${BASE_URL}/api/burnout/historical/${encodeURIComponent(targetName)}`
     
     if (startDate && endDate) {
       url += `?start_date=${startDate}&end_date=${endDate}`
@@ -95,25 +95,25 @@ export const api = {
   },
 
   getTeamMembers: async (teamName: string): Promise<Member[]> => {
-    const res = await fetchWithAuth(`${API_BASE}/users/team/${encodeURIComponent(teamName)}`)
+    const res = await fetchWithAuth(`${BASE_URL}/api/users/team/${encodeURIComponent(teamName)}`)
     if (!res.ok) throw new Error("Failed to fetch team members")
     return res.json()
   },
 
   getChannelMembers: async (channelId: string): Promise<Member[]> => {
-    const res = await fetchWithAuth(`${API_BASE}/users/channel/${encodeURIComponent(channelId)}`)
+    const res = await fetchWithAuth(`${BASE_URL}/api/users/channel/${encodeURIComponent(channelId)}`)
     if (!res.ok) throw new Error("Failed to fetch channel members")
     return res.json()
   },
 
   getNotifications: async (email: string): Promise<AppNotification[]> => {
-    const res = await fetchWithAuth(`${API_BASE}/notifications/${encodeURIComponent(email)}`)
+    const res = await fetchWithAuth(`${BASE_URL}/api/notifications/${encodeURIComponent(email)}`)
     if (!res.ok) throw new Error("Failed to fetch notifications")
     return res.json()
   },
 
   markNotificationAsRead: async (notificationId: string, email: string): Promise<void> => {
-    const res = await fetchWithAuth(`${API_BASE}/notifications/${notificationId}/read`, {
+    const res = await fetchWithAuth(`${BASE_URL}/api/notifications/${notificationId}/read`, {
       method: 'PUT',
       body: JSON.stringify({ email: email })
     })
