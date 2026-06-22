@@ -27,11 +27,15 @@ export function DashboardShell() {
     return <AccessDeniedState message={authMessage} />
   }
 
-  const renderMainContent = () => {
-    if (userRole === "employee") {
-      return <EmployeeEmptyState />
-    }
+  if (userRole === "employee") {
+    return (
+      <div className="flex h-screen w-full bg-background">
+        <EmployeeEmptyState />
+      </div>
+    )
+  }
 
+  const renderMainContent = () => {
     switch (currentView) {
       case "team":
         return <TeamDetail />

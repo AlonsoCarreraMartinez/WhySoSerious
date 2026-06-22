@@ -66,6 +66,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       try {
         const API_BASE = `${(import.meta as any).env.VITE_API_URL}/api`
 
+        if (!API_BASE || API_BASE.includes("undefined")) throw new Error("VITE_API_URL is missing!")
+        
         const response = await fetch(`${API_BASE}/auth/verify`, {
           method: "POST",
           headers: { 
@@ -89,7 +91,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         if (authData.in_org) {
           let computedRole: UserRole = "employee" 
           
-          if (authData.is_admin && authData.db_role?.toLowerCase() === "admin") {
+          if (authData.is_admin) {
             computedRole = "admin" 
           } else if (authData.managed_teams && authData.managed_teams.length > 0) {
             computedRole = "manager" 
