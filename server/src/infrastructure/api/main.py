@@ -22,7 +22,11 @@ app = FastAPI(title="WhySoSerious")
 # Configure CORS to allow requests from the React frontend.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://why-so-serious-88p6ce3v6-acarrm04-7573s-projects.vercel.app"],
+    allow_origins=[
+        "https://why-so-serious-88p6ce3v6-acarrm04-7573s-projects.vercel.app",
+        "https://why-so-serious.vercel.app"
+    ],
+    allow_origin_regex="https://why-so-serious-.*\\.vercel\\.app",
     allow_credentials=True, 
     allow_methods=["*"],
     allow_headers=["*"], 
@@ -53,9 +57,10 @@ async def startup_event():
     print("Backend started and Cron Jobs scheduled")
 
 # Routers.
-app.include_router(teams.router, prefix="/api")
-app.include_router(burnout.router, prefix="/api")
-app.include_router(channels.router, prefix="/api")
-app.include_router(users.router, prefix="/api")
-app.include_router(auth.router, prefix="/api")
-app.include_router(notifications.router, prefix="/api")
+for prefix in ["/api", ""]:
+    app.include_router(teams.router, prefix=prefix)
+    app.include_router(burnout.router, prefix=prefix)
+    app.include_router(channels.router, prefix=prefix)
+    app.include_router(users.router, prefix=prefix)
+    app.include_router(auth.router, prefix=prefix)
+    app.include_router(notifications.router, prefix=prefix)
