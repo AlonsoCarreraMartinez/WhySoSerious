@@ -1,6 +1,6 @@
 import { Team, Channel, Member, HistoricalDataPoint } from "./mock-data"
 
-const BASE_URL = (import.meta as any).env.VITE_API_URL
+const API_BASE = `${(import.meta as any).env.VITE_API_URL}/api`
 
 export interface AppNotification {
   id: string;
@@ -16,6 +16,7 @@ const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
   
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    "ngrok-skip-browser-warning": "true",
     ...((options.headers as Record<string, string>) || {})
   };
 
@@ -29,61 +30,37 @@ const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
 export const api = {
   
   getDashboardTeams: async (): Promise<Team[]> => {
-    const res = await fetchWithAuth(`${BASE_URL}/api/teams/dashboard`)
+    const res = await fetchWithAuth(`${API_BASE}/teams/dashboard`)
     if (!res.ok) throw new Error("Failed to fetch dashboard teams")
-    const data = await res.json()
-    
-    return data.map((team: any) => ({
-      ...team,
-      burnoutIndex: team.burnoutScore ?? team.burnout_index ?? team.burnoutIndex ?? 0,
-      sentimentScore: team.sentimentScore ?? team.sentiment_score ?? 0,
-      messageCount: team.messageCount ?? team.message_count ?? 0,
-      memberCount: team.memberCount ?? team.member_count ?? 0,
-    }))
+    return res.json()
   },
   
   getTeamDetail: async (teamName: string): Promise<Team> => {
-    const res = await fetchWithAuth(`${BASE_URL}/api/teams/${encodeURIComponent(teamName)}`)
+    const res = await fetchWithAuth(`${API_BASE}/teams/${encodeURIComponent(teamName)}`)
     if (!res.ok) throw new Error("Failed to fetch team details")
-    const team = await res.json()
-    
-    return {
-      ...team,
-      burnoutIndex: team.burnoutScore ?? team.burnout_index ?? team.burnoutIndex ?? 0,
-      sentimentScore: team.sentimentScore ?? team.sentiment_score ?? 0,
-      messageCount: team.messageCount ?? team.message_count ?? 0,
-      memberCount: team.memberCount ?? team.member_count ?? 0,
-    }
+    return res.json()
   },
 
   getDashboardChannels: async (): Promise<Channel[]> => {
-    const res = await fetchWithAuth(`${BASE_URL}/api/channels/dashboard`)
+    const res = await fetchWithAuth(`${API_BASE}/channels/dashboard`)
     if (!res.ok) throw new Error("Failed to fetch dashboard channels")
-    const data = await res.json()
-    
-    return data.map((channel: any) => ({
-      ...channel,
-      burnoutIndex: channel.burnoutScore ?? channel.burnout_index ?? channel.burnoutIndex ?? 0,
-      sentimentScore: channel.sentimentScore ?? channel.sentiment_score ?? 0,
-      messageCount: channel.messageCount ?? channel.message_count ?? 0,
-    }))
+    return res.json()
+  },
+
+  getTeamChannels: async (teamName: string): Promise<Channel[]> => {
+    const res = await fetchWithAuth(`${API_BASE}/channels/team/${encodeURIComponent(teamName)}`)
+    if (!res.ok) throw new Error("Failed to fetch team channels")
+    return res.json()
   },
 
   getChannelDetail: async (channelId: string): Promise<Channel> => {
-    const res = await fetchWithAuth(`${BASE_URL}/api/channels/${encodeURIComponent(channelId)}`)
+    const res = await fetchWithAuth(`${API_BASE}/channels/${encodeURIComponent(channelId)}`)
     if (!res.ok) throw new Error("Failed to fetch channel details")
-    const channel = await res.json()
-    
-    return {
-      ...channel,
-      burnoutIndex: channel.burnoutScore ?? channel.burnout_index ?? channel.burnoutIndex ?? 0,
-      sentimentScore: channel.sentimentScore ?? channel.sentiment_score ?? 0,
-      messageCount: channel.messageCount ?? channel.message_count ?? 0,
-    }
+    return res.json()
   },
 
-  getBurnoutHistorical: async (targetName: string, startDate?: string, endDate?: string): Promise<HistoricalDataPoint[]> => {
-    let url = `${BASE_URL}/api/burnout/historical/${encodeURIComponent(targetName)}`
+  getHistoricalData: async (targetName: string, startDate?: string | null, endDate?: string | null): Promise<HistoricalDataPoint[]> => {
+    let url = `${API_BASE}/burnout/historical/${encodeURIComponent(targetName)}`
     
     if (startDate && endDate) {
       url += `?start_date=${startDate}&end_date=${endDate}`
@@ -95,27 +72,27 @@ export const api = {
   },
 
   getTeamMembers: async (teamName: string): Promise<Member[]> => {
-    const res = await fetchWithAuth(`${BASE_URL}/api/users/team/${encodeURIComponent(teamName)}`)
+    const res = await fetchWithAuth(`${API_BASE}/users/team/${encodeURIComponent(teamName)}`)
     if (!res.ok) throw new Error("Failed to fetch team members")
     return res.json()
   },
 
   getChannelMembers: async (channelId: string): Promise<Member[]> => {
-    const res = await fetchWithAuth(`${BASE_URL}/api/users/channel/${encodeURIComponent(channelId)}`)
+    const res = await fetchWithAuth(`${API_BASE}/users/channel/${encodeURIComponent(channelId)}`)
     if (!res.ok) throw new Error("Failed to fetch channel members")
     return res.json()
   },
 
   getNotifications: async (email: string): Promise<AppNotification[]> => {
-    const res = await fetchWithAuth(`${BASE_URL}/api/notifications/${encodeURIComponent(email)}`)
+    const res = await fetchWithAuth(`${API_BASE}/notifications/${encodeURIComponent(email)}`)
     if (!res.ok) throw new Error("Failed to fetch notifications")
     return res.json()
   },
 
   markNotificationAsRead: async (notificationId: string, email: string): Promise<void> => {
-    const res = await fetchWithAuth(`${BASE_URL}/api/notifications/${notificationId}/read`, {
+    const res = await fetchWithAuth(`${API_BASE}/notifications/${encodeURIComponent(notificationId)}/read`, {
       method: 'PUT',
-      body: JSON.stringify({ email: email })
+      body: JSON.stringify({ email })
     })
     if (!res.ok) throw new Error("Failed to mark notification as read")
   }

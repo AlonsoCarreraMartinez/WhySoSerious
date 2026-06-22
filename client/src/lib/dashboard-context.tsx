@@ -83,7 +83,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         const authData = await response.json()
 
         if (authData.token) {
-          // 3. CORRECCIÓN: Guardamos el token en sessionStorage
+          
           sessionStorage.setItem("jwt_token", authData.token)
         }
 
