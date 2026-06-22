@@ -35,10 +35,10 @@ export const api = {
     
     return data.map((team: any) => ({
       ...team,
-      burnoutIndex: team.burnout_index ?? team.burnoutIndex ?? 0,
-      sentimentScore: team.sentiment_score ?? team.sentimentScore ?? 0,
-      messageCount: team.message_count ?? team.messageCount ?? 0,
-      memberCount: team.member_count ?? team.memberCount ?? 0,
+      burnoutIndex: team.burnoutScore ?? team.burnout_index ?? team.burnoutIndex ?? 0,
+      sentimentScore: team.sentimentScore ?? team.sentiment_score ?? 0,
+      messageCount: team.messageCount ?? team.message_count ?? 0,
+      memberCount: team.memberCount ?? team.member_count ?? 0,
     }))
   },
   
@@ -49,10 +49,10 @@ export const api = {
     
     return {
       ...team,
-      burnoutIndex: team.burnout_index ?? team.burnoutIndex ?? 0,
-      sentimentScore: team.sentiment_score ?? team.sentimentScore ?? 0,
-      messageCount: team.message_count ?? team.messageCount ?? 0,
-      memberCount: team.member_count ?? team.memberCount ?? 0,
+      burnoutIndex: team.burnoutScore ?? team.burnout_index ?? team.burnoutIndex ?? 0,
+      sentimentScore: team.sentimentScore ?? team.sentiment_score ?? 0,
+      messageCount: team.messageCount ?? team.message_count ?? 0,
+      memberCount: team.memberCount ?? team.member_count ?? 0,
     }
   },
 
@@ -63,9 +63,9 @@ export const api = {
     
     return data.map((channel: any) => ({
       ...channel,
-      burnoutIndex: channel.burnout_index ?? channel.burnoutIndex ?? 0,
-      sentimentScore: channel.sentiment_score ?? channel.sentimentScore ?? 0,
-      messageCount: channel.message_count ?? channel.messageCount ?? 0,
+      burnoutIndex: channel.burnoutScore ?? channel.burnout_index ?? channel.burnoutIndex ?? 0,
+      sentimentScore: channel.sentimentScore ?? channel.sentiment_score ?? 0,
+      messageCount: channel.messageCount ?? channel.message_count ?? 0,
     }))
   },
 
@@ -76,9 +76,9 @@ export const api = {
     
     return {
       ...channel,
-      burnoutIndex: channel.burnout_index ?? channel.burnoutIndex ?? 0,
-      sentimentScore: channel.sentiment_score ?? channel.sentimentScore ?? 0,
-      messageCount: channel.message_count ?? channel.messageCount ?? 0,
+      burnoutIndex: channel.burnoutScore ?? channel.burnout_index ?? channel.burnoutIndex ?? 0,
+      sentimentScore: channel.sentimentScore ?? channel.sentiment_score ?? 0,
+      messageCount: channel.messageCount ?? channel.message_count ?? 0,
     }
   },
 
@@ -113,8 +113,9 @@ export const api = {
   },
 
   markNotificationAsRead: async (notificationId: string, email: string): Promise<void> => {
-    const res = await fetchWithAuth(`${API_BASE}/notifications/${notificationId}/read?user_email=${encodeURIComponent(email)}`, {
-      method: 'PUT'
+    const res = await fetchWithAuth(`${API_BASE}/notifications/${notificationId}/read`, {
+      method: 'PUT',
+      body: JSON.stringify({ email: email })
     })
     if (!res.ok) throw new Error("Failed to mark notification as read")
   }
