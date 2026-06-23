@@ -91,7 +91,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
           if (authData.is_admin) {
             computedRole = "admin"
-          } else if (authData.is_owner || (authData.managed_teams && authData.managed_teams.length > 0)) {
+          // ELIMINADO EL is_owner: Solo miramos si tiene equipos de verdad asignados
+          } else if (authData.managed_teams && authData.managed_teams.length > 0) {
             computedRole = "manager"
           }
 

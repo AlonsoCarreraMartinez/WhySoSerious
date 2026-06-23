@@ -12,10 +12,11 @@ export interface AppNotification {
 }
 
 const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
-  const token = localStorage.getItem("jwt_token");
+  const token = sessionStorage.getItem("jwt_token");
   
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    "ngrok-skip-browser-warning": "true",
     ...((options.headers as Record<string, string>) || {})
   };
 
@@ -90,7 +91,7 @@ export const api = {
 
   markNotificationAsRead: async (notificationId: string, email: string): Promise<void> => {
     const res = await fetchWithAuth(`${API_BASE}/notifications/${encodeURIComponent(notificationId)}/read`, {
-      method: "PUT",
+      method: 'PUT',
       body: JSON.stringify({ email })
     })
     if (!res.ok) throw new Error("Failed to mark notification as read")
